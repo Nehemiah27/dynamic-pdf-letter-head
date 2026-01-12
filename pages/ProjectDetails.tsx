@@ -462,7 +462,6 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({
         .setTextColor(0, 0, 255)
         .text(`Email: ${targetQuote.regardsEmail}`, margin + 4, y);
       drawFooter(currentPageNum);
-
       if (showsIndex) {
         doc.addPage();
         currentPageNum = 2;
@@ -597,6 +596,7 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({
               doc.addPage();
               currentPageNum++;
               drawHeader();
+              drawFooter(currentPageNum);
               currentSectionY = startYAfterHeader + 10;
               currentSectionY = drawTableHeaders(currentSectionY);
             }
