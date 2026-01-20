@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { Plus, Search, Mail, Phone, MapPin, Trash2, Edit, X } from 'lucide-react';
+import { Plus, Search, Mail, Phone, MapPin, Trash2, Edit, X, UserPlus, Briefcase, ShieldCheck } from 'lucide-react';
 import { Client } from '../types';
 
 interface ClientsProps {
@@ -35,7 +36,7 @@ const Clients: React.FC<ClientsProps> = ({ clients, onAddClient, onDeleteClient 
   );
 
   return (
-    <div className="space-y-6 bg-white animate-fade-in">
+    <div className="space-y-6 bg-white animate-fade-in text-slate-800">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-black text-[#2E3191] uppercase tracking-tight">Client Partners</h1>
@@ -117,89 +118,117 @@ const Clients: React.FC<ClientsProps> = ({ clients, onAddClient, onDeleteClient 
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2.5rem] w-full max-w-2xl shadow-2xl overflow-hidden border border-slate-100">
-            <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-start justify-center p-4 pt-[100px] h-screen overflow-hidden">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-lg h-[80vh] shadow-2xl overflow-hidden border border-slate-100 animate-fade-in relative flex flex-col mb-12">
+            {/* Modal Header - Fixed at Top */}
+            <div className="relative z-20 p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50 shadow-sm shrink-0">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-[#2E3191] text-white flex items-center justify-center shadow-lg shadow-[#2E3191]/20">
-                  <Plus size={24} />
+                  <UserPlus size={24} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-black text-[#2E3191] tracking-tight uppercase">Client Onboarding</h2>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Centralised Entity Registration</p>
+                  <h2 className="text-xl font-black text-[#2E3191] tracking-tight uppercase leading-none">Register Client</h2>
+                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">Onboarding Portal</p>
                 </div>
               </div>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 p-2">
-                <X size={24} />
+              <button 
+                onClick={() => setShowModal(false)} 
+                className="p-2 text-slate-500 hover:text-white hover:bg-[#EC1C24] bg-slate-100 rounded-xl transition-all duration-200 group"
+                aria-label="Close modal"
+              >
+                <X size={24} className="transition-transform group-hover:rotate-90" />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-5">
-                  <div className="space-y-1.5">
-                    <label className="block text-[10px] font-black text-[#2E3191] uppercase tracking-widest ml-1">Company Registered Name</label>
-                    <input 
-                      required
-                      type="text" 
-                      className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] outline-none font-bold text-slate-800 transition-all"
-                      value={newClient.name}
-                      onChange={e => setNewClient({...newClient, name: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="block text-[10px] font-black text-[#2E3191] uppercase tracking-widest ml-1">GST Identification (GSTIN)</label>
-                    <input 
-                      required
-                      type="text" 
-                      className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] outline-none font-bold text-slate-800 transition-all"
-                      value={newClient.gstin}
-                      onChange={e => setNewClient({...newClient, gstin: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="block text-[10px] font-black text-[#2E3191] uppercase tracking-widest ml-1">Corporate Headquarters</label>
-                    <textarea 
-                      required
-                      className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] outline-none font-bold text-slate-800 transition-all h-32"
-                      value={newClient.address}
-                      onChange={e => setNewClient({...newClient, address: e.target.value})}
-                    />
-                  </div>
+            
+            {/* Scrollable Form Content */}
+            <form onSubmit={handleSubmit} className="p-8 space-y-6 flex-1 overflow-y-auto custom-scrollbar relative z-10">
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 border-b border-slate-50 pb-2">
+                  <Briefcase size={14} className="text-[#2E3191]" />
+                  <span className="text-[10px] font-black text-[#2E3191] uppercase tracking-[0.2em]">Company Details</span>
                 </div>
-                <div className="space-y-5">
+
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-black text-[#2E3191] uppercase tracking-widest ml-1">Entity Name</label>
+                  <input 
+                    required
+                    type="text" 
+                    placeholder="e.g. Geeta Interior"
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] outline-none font-bold text-slate-800 transition-all text-sm"
+                    value={newClient.name}
+                    onChange={e => setNewClient({...newClient, name: e.target.value})}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-black text-[#2E3191] uppercase tracking-widest ml-1">GSTIN Number</label>
+                  <input 
+                    required
+                    type="text" 
+                    placeholder="27AAAAA0000A1Z5"
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] outline-none font-mono font-black text-[#EC1C24] transition-all text-sm"
+                    value={newClient.gstin}
+                    onChange={e => setNewClient({...newClient, gstin: e.target.value})}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-black text-[#2E3191] uppercase tracking-widest ml-1">Full Address</label>
+                  <textarea 
+                    required
+                    placeholder="Enter complete office/site address..."
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] outline-none font-bold text-slate-800 transition-all h-24 resize-none text-sm"
+                    value={newClient.address}
+                    onChange={e => setNewClient({...newClient, address: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-4">
+                <div className="flex items-center gap-2 border-b border-slate-50 pb-2">
+                  <Mail size={14} className="text-[#2E3191]" />
+                  <span className="text-[10px] font-black text-[#2E3191] uppercase tracking-[0.2em]">Liaison Information</span>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-black text-[#2E3191] uppercase tracking-widest ml-1">Contact Person</label>
+                  <input 
+                    required
+                    type="text" 
+                    placeholder="Name of primary contact"
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] outline-none font-bold text-slate-800 transition-all text-sm"
+                    value={newClient.contactPerson}
+                    onChange={e => setNewClient({...newClient, contactPerson: e.target.value})}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="block text-[10px] font-black text-[#2E3191] uppercase tracking-widest ml-1">Primary Contact Liaison</label>
-                    <input 
-                      required
-                      type="text" 
-                      className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] outline-none font-bold text-slate-800 transition-all"
-                      value={newClient.contactPerson}
-                      onChange={e => setNewClient({...newClient, contactPerson: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="block text-[10px] font-black text-[#2E3191] uppercase tracking-widest ml-1">Official Digital Channel (Email)</label>
-                    <input 
-                      required
-                      type="email" 
-                      className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] outline-none font-bold text-slate-800 transition-all"
-                      value={newClient.email}
-                      onChange={e => setNewClient({...newClient, email: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="block text-[10px] font-black text-[#2E3191] uppercase tracking-widest ml-1">Mobile Access Token (Phone)</label>
+                    <label className="block text-[10px] font-black text-[#2E3191] uppercase tracking-widest ml-1">Phone Number</label>
                     <input 
                       required
                       type="tel" 
-                      className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] outline-none font-bold text-slate-800 transition-all"
+                      placeholder="+91-XXXXX"
+                      className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] outline-none font-bold text-slate-800 transition-all text-sm"
                       value={newClient.phone}
                       onChange={e => setNewClient({...newClient, phone: e.target.value})}
                     />
                   </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-black text-[#2E3191] uppercase tracking-widest ml-1">Email ID</label>
+                    <input 
+                      required
+                      type="email" 
+                      placeholder="office@client.com"
+                      className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] outline-none font-bold text-slate-800 transition-all text-sm"
+                      value={newClient.email}
+                      onChange={e => setNewClient({...newClient, email: e.target.value})}
+                    />
+                  </div>
                 </div>
               </div>
-              <div className="flex gap-4 pt-8 border-t border-slate-50 mt-8">
+
+              <div className="flex gap-4 pt-6 border-t border-slate-100 sticky bottom-0 bg-white">
                 <button 
                   type="button"
                   onClick={() => setShowModal(false)}
@@ -209,15 +238,31 @@ const Clients: React.FC<ClientsProps> = ({ clients, onAddClient, onDeleteClient 
                 </button>
                 <button 
                   type="submit"
-                  className="flex-1 px-4 py-4 bg-[#2E3191] text-white font-black rounded-2xl hover:bg-[#1e206b] transition-all shadow-xl shadow-[#2E3191]/20 uppercase text-xs tracking-widest"
+                  className="flex-1 px-4 py-4 bg-[#EC1C24] text-white font-black rounded-2xl hover:bg-[#d11920] transition-all shadow-xl shadow-[#EC1C24]/20 uppercase text-xs tracking-widest active:scale-95"
                 >
-                  Register Partner
+                  Verify & Register
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+      
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #f1f5f9;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #e2e8f0;
+        }
+      `}</style>
     </div>
   );
 };

@@ -1,3 +1,4 @@
+
 export type Role = 'Administrator' | 'Standard';
 
 export interface User {
@@ -66,6 +67,9 @@ export interface Quotation {
   
   // Flexible Sections
   sections: Section[];
+
+  // Design Mockups (Images/PDF thumbnails as base64)
+  designMockups?: string[];
   
   // Closing
   regardsName: string;

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { 
@@ -19,9 +20,10 @@ interface LayoutProps {
   onLogout: () => void;
   brandColor: string;
   logo: string;
+  logoBackgroundColor: string;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, brandColor, logo }) => {
+const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, brandColor, logo, logoBackgroundColor }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -45,7 +47,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, brandColor, l
   const brandRed = '#EC1C24';
 
   return (
-    <div className="min-h-screen flex bg-white overflow-hidden font-['Inter']">
+    <div className="h-screen flex bg-white overflow-hidden font-['Inter']">
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div 
@@ -66,7 +68,11 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, brandColor, l
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16 blur-2xl pointer-events-none"></div>
           
           <div className="p-8 pb-4 relative z-10">
-            <div className="bg-white p-4 rounded-2xl shadow-lg mb-2">
+            {/* Sidebar Logo Area based on Brand Logo Update */}
+            <div 
+              className="p-4 rounded-2xl shadow-lg mb-2 flex items-center justify-center min-h-[80px]" 
+              style={{ backgroundColor: logoBackgroundColor || '#ffffff' }}
+            >
               <img 
                 src={logo} 
                 alt="Revira Nexgen" 
@@ -80,7 +86,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, brandColor, l
             </div>
           </div>
 
-          <nav className="flex-1 px-6 py-8 space-y-2 relative z-10">
+          <nav className="flex-1 px-6 py-8 space-y-2 relative z-10 overflow-y-auto">
             {navItems.map((item) => (
               <NavLink
                 key={item.path}
@@ -121,10 +127,10 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, brandColor, l
         </div>
       </aside>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         {/* Header */}
-        <header className="h-20 bg-white border-b border-slate-100 flex items-center justify-between px-6 lg:px-10 z-30">
+        <header className="h-20 bg-white border-b border-slate-100 flex items-center justify-between px-6 lg:px-10 z-30 shrink-0">
           <button 
             className="lg:hidden p-3 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
             onClick={() => setSidebarOpen(true)}
@@ -162,8 +168,8 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, brandColor, l
           </div>
         </header>
 
-        {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-6 lg:p-10 no-print bg-white">
+        {/* Page Content - Lock to remaining height of 100vh */}
+        <main className="flex-1 overflow-y-auto p-6 lg:p-10 no-print bg-white h-[calc(100vh-5rem)]">
           {children}
         </main>
       </div>

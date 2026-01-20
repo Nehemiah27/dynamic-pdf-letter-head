@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppState, User, Client, Project, Quotation, Branding, WorkflowType, Section } from './types';
@@ -169,6 +170,7 @@ const App: React.FC = () => {
         onLogout={handleLogout} 
         brandColor={state.branding.brandColor}
         logo={state.branding.logo}
+        logoBackgroundColor={state.branding.logoBackgroundColor}
       >
         {children}
       </Layout>
