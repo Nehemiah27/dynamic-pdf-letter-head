@@ -10,7 +10,10 @@ import {
   ExternalLink,
   ChevronRight,
   ChevronDown,
-  X
+  X,
+  Factory,
+  Hammer,
+  Truck
 } from 'lucide-react';
 import { Project, Client, WorkflowType } from '../types';
 
@@ -138,7 +141,7 @@ const Projects: React.FC<ProjectsProps> = ({ projects, clients, onAddProject }) 
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2.5rem] w-full max-w-lg shadow-2xl overflow-hidden border border-slate-100">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-2xl shadow-2xl overflow-hidden border border-slate-100">
             <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-[#2E3191] text-white flex items-center justify-center shadow-lg shadow-[#2E3191]/20">
@@ -154,19 +157,32 @@ const Projects: React.FC<ProjectsProps> = ({ projects, clients, onAddProject }) 
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-8 space-y-6">
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-black text-[#2E3191] uppercase tracking-widest ml-1">Project Identifier</label>
-                <input 
-                  required
-                  type="text" 
-                  className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] outline-none font-bold text-slate-800 transition-all"
-                  value={newProject.name}
-                  onChange={e => setNewProject({...newProject, name: e.target.value})}
-                  placeholder="e.g. Warehouse Structural Fabrication"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-black text-[#2E3191] uppercase tracking-widest ml-1">Project Identifier</label>
+                  <input 
+                    required
+                    type="text" 
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] outline-none font-bold text-slate-800 transition-all"
+                    value={newProject.name}
+                    onChange={e => setNewProject({...newProject, name: e.target.value})}
+                    placeholder="e.g. Warehouse Structural Fabrication"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-black text-[#2E3191] uppercase tracking-widest ml-1">Geographic Deployment</label>
+                  <input 
+                    required
+                    type="text" 
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] outline-none font-bold text-slate-800 transition-all"
+                    value={newProject.location}
+                    onChange={e => setNewProject({...newProject, location: e.target.value})}
+                    placeholder="e.g. Plot 4, Industrial Estate, Pune"
+                  />
+                </div>
               </div>
 
-              {/* Flashy Client Selector */}
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-black text-[#2E3191] uppercase tracking-widest ml-1">Select Client Partner</label>
                 <div className="relative group/select">
@@ -185,34 +201,40 @@ const Projects: React.FC<ProjectsProps> = ({ projects, clients, onAddProject }) 
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-black text-[#2E3191] uppercase tracking-widest ml-1">Geographic Deployment</label>
-                <input 
-                  required
-                  type="text" 
-                  className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] outline-none font-bold text-slate-800 transition-all"
-                  value={newProject.location}
-                  onChange={e => setNewProject({...newProject, location: e.target.value})}
-                  placeholder="e.g. Plot 4, Industrial Estate, Pune"
-                />
-              </div>
-
-              {/* Flashy Workflow Selector */}
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-black text-[#2E3191] uppercase tracking-widest ml-1">Strategic Workflow</label>
-                <div className="relative group/select">
-                  <select 
-                    className="w-full px-5 py-4 bg-white border-2 border-slate-100 rounded-2xl focus:ring-4 focus:ring-[#2E3191]/10 focus:border-[#2E3191] outline-none font-black text-slate-800 transition-all appearance-none cursor-pointer hover:border-[#2E3191]/30 hover:shadow-lg hover:shadow-[#2E3191]/5"
-                    value={newProject.workflow}
-                    onChange={e => setNewProject({...newProject, workflow: e.target.value as WorkflowType})}
-                  >
-                    {Object.values(WorkflowType).map(type => (
-                      <option key={type} value={type}>{type}</option>
-                    ))}
-                  </select>
-                  <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-300 group-hover/select:text-[#EC1C24] group-hover/select:scale-110 transition-all duration-300">
-                    <ChevronDown size={20} />
-                  </div>
+              {/* Redesigned Workflow Selection Cards */}
+              <div className="space-y-3">
+                <label className="block text-[10px] font-black text-[#2E3191] uppercase tracking-widest ml-1">Strategic Workflow Selection</label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {[
+                    { type: WorkflowType.SUPPLY_AND_FABRICATION, label: 'Supply & Fab', icon: <Factory size={24} />, desc: 'Full PEB Lifecycle' },
+                    { type: WorkflowType.STRUCTURAL_FABRICATION, label: 'Structural Fab', icon: <Hammer size={24} />, desc: 'Custom Frameworks' },
+                    { type: WorkflowType.JOB_WORK, label: 'Job Work', icon: <Truck size={24} />, desc: 'Service-Only Basis' }
+                  ].map((wf) => (
+                    <button
+                      key={wf.type}
+                      type="button"
+                      onClick={() => setNewProject({...newProject, workflow: wf.type})}
+                      className={`p-5 rounded-3xl border-2 transition-all text-left flex flex-col gap-3 group/card ${
+                        newProject.workflow === wf.type 
+                          ? 'bg-[#2E3191] border-[#2E3191] text-white shadow-xl shadow-[#2E3191]/20 scale-[1.02]' 
+                          : 'bg-slate-50 border-slate-100 text-slate-400 hover:border-[#2E3191]/30 hover:bg-white'
+                      }`}
+                    >
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${
+                        newProject.workflow === wf.type ? 'bg-white/20 text-white' : 'bg-white text-slate-300 group-hover/card:text-[#2E3191]'
+                      }`}>
+                        {wf.icon}
+                      </div>
+                      <div>
+                        <p className={`text-[10px] font-black uppercase tracking-widest ${newProject.workflow === wf.type ? 'text-white' : 'text-[#2E3191]'}`}>
+                          {wf.label}
+                        </p>
+                        <p className={`text-[8px] font-bold uppercase opacity-60`}>
+                          {wf.desc}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
                 </div>
               </div>
 

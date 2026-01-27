@@ -105,16 +105,19 @@ const App: React.FC = () => {
     const project = state.projects.find(p => p.id === projectId);
     if (!project) return;
 
+    const client = state.clients.find(c => c.id === project.clientId);
+    const clientName = client?.name || 'Unknown_Client';
+
     const existingQuotes = state.quotations.filter(q => q.projectId === projectId);
     const newVersion = existingQuotes.length + 1;
     
     let newQuote: Quotation;
     if (project.workflow === WorkflowType.STRUCTURAL_FABRICATION) {
-      newQuote = createStructuralFabricationTemplate(projectId, newVersion);
+      newQuote = createStructuralFabricationTemplate(projectId, newVersion, clientName);
     } else if (project.workflow === WorkflowType.JOB_WORK) {
-      newQuote = createJobWorkTemplate(projectId, newVersion);
+      newQuote = createJobWorkTemplate(projectId, newVersion, clientName);
     } else {
-      newQuote = createSupplyAndFabricationTemplate(projectId, newVersion);
+      newQuote = createSupplyAndFabricationTemplate(projectId, newVersion, clientName);
     }
 
     setState(prev => ({ ...prev, quotations: [...prev.quotations, newQuote] }));

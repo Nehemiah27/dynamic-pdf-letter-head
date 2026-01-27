@@ -37,6 +37,23 @@ const DEFAULT_CLOSING_BODY = `We hope you’ll find our offer in line with your 
 
 However, please feel free to contact us for any sort of additional information that you may feel is required pertaining to this offer. We assure you our best support at all times.`;
 
+// Helper functions for dynamic strings
+const getCurrentDateStr = () => {
+  const now = new Date();
+  const d = String(now.getDate()).padStart(2, '0');
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const y = now.getFullYear();
+  return `${d}-${m}-${y}`;
+};
+
+const getMonthYearStr = () => {
+  const now = new Date();
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${months[now.getMonth()]}-${now.getFullYear()}`;
+};
+
+const formatVersion = (v: number) => String(v).padStart(3, '0');
+
 // --- SUPPLY AND FABRICATION SECTIONS ---
 const createSupplyAndFabSections = (): Section[] => [
   {
@@ -279,21 +296,21 @@ const createJobWorkSections = (): Section[] => [
   }
 ];
 
-export const createSupplyAndFabricationTemplate = (projectId: string, version: number): Quotation => ({
+export const createSupplyAndFabricationTemplate = (projectId: string, version: number, clientName: string): Quotation => ({
   id: Math.random().toString(36).substr(2, 9),
   projectId,
   version,
   status: 'Draft',
-  refNo: `DNSPL/2025-2026/Geeta Interior/DNG-00${version}`,
-  date: '02-11-2025',
-  enquiryNo: `DNSPL-GI- DNG-00${version}`,
+  refNo: `RNS-PEB/${getMonthYearStr()}/${clientName.replace(/\s+/g, '_')}/RNG-${formatVersion(version)}`,
+  date: getCurrentDateStr(),
+  enquiryNo: `RNS-PEB- RNS-${formatVersion(version)}`,
   location: 'Madgaon (Goa)',
   subject: 'Supply & erection of Steel Structures for PEB Shed',
   salutation: 'Dear Sir,',
   introText: 'Techno-Commercial Offer',
   introBody: DEFAULT_INTRO_BODY,
   closingBody: DEFAULT_CLOSING_BODY,
-  recipientName: 'Geeta Interior Madgaon (Goa)',
+  recipientName: clientName,
   recipientAddress: 'Madgaon (Goa)',
   recipientContactPerson: 'Contact Person',
   recipientPhone: '8390491843',
@@ -312,17 +329,29 @@ IFSC Code: YESB0000733`,
   sections: createSupplyAndFabSections()
 });
 
-export const createStructuralFabricationTemplate = (projectId: string, version: number): Quotation => ({
-  ...createSupplyAndFabricationTemplate(projectId, version),
-  id: Math.random().toString(36).substr(2, 9),
-  sections: createStructuralFabSections()
-});
+export const createStructuralFabricationTemplate = (projectId: string, version: number, clientName: string): Quotation => {
+  const base = createSupplyAndFabricationTemplate(projectId, version, clientName);
+  return {
+    ...base,
+    id: Math.random().toString(36).substr(2, 9),
+    refNo: `RNS-SF/${getMonthYearStr()}/${clientName.replace(/\s+/g, '_')}/RNG-${formatVersion(version)}`,
+    enquiryNo: `RNS-SF- RNS-${formatVersion(version)}`,
+    subject: 'Structural Fabrication work',
+    sections: createStructuralFabSections()
+  };
+};
 
-export const createJobWorkTemplate = (projectId: string, version: number): Quotation => ({
-  ...createSupplyAndFabricationTemplate(projectId, version),
-  id: Math.random().toString(36).substr(2, 9),
-  sections: createJobWorkSections()
-});
+export const createJobWorkTemplate = (projectId: string, version: number, clientName: string): Quotation => {
+  const base = createSupplyAndFabricationTemplate(projectId, version, clientName);
+  return {
+    ...base,
+    id: Math.random().toString(36).substr(2, 9),
+    refNo: `RNS-JW/${getMonthYearStr()}/${clientName.replace(/\s+/g, '_')}/RNG-${formatVersion(version)}`,
+    enquiryNo: `RNS-JW- RNS-${formatVersion(version)}`,
+    subject: 'Job Work',
+    sections: createJobWorkSections()
+  };
+};
 
 const DEFAULT_DATA: AppState = {
   currentUser: null,
@@ -336,7 +365,7 @@ const DEFAULT_DATA: AppState = {
     { id: 'p1', clientId: 'c1', name: 'Goa PEB Shed Project', location: 'Madgaon (Goa)', workflow: WorkflowType.SUPPLY_AND_FABRICATION, status: 'Ongoing', createdAt: new Date().toISOString(), assignedUserId: '1' },
   ],
   quotations: [
-    createSupplyAndFabricationTemplate('p1', 1)
+    createSupplyAndFabricationTemplate('p1', 1, 'GEETA INTERIOR')
   ],
   branding: INITIAL_BRANDING,
 };
