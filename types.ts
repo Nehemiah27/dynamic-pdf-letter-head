@@ -6,6 +6,7 @@ export interface User {
   name: string;
   email: string;
   role: Role;
+  password?: string;
   avatar?: string;
 }
 
@@ -29,12 +30,12 @@ export enum WorkflowType {
 export interface Section {
   id: string;
   title: string;
-  type: 'table' | 'list' | 'text' | 'mixed'; // Added 'mixed' for paragraph + list
-  headers: string[]; // For tables
-  rows: string[][];  // For tables (dynamic columns)
-  items: string[];   // For lists
-  content: string;   // For text/paragraph
-  columnWidths?: (number | null)[]; // Custom column widths in mm for PDF/px for UI
+  type: 'table' | 'list' | 'text' | 'mixed';
+  headers: string[];
+  rows: string[][];
+  items: string[];
+  content: string;
+  columnWidths?: (number | null)[];
 }
 
 export interface Quotation {
@@ -42,40 +43,27 @@ export interface Quotation {
   projectId: string;
   version: number;
   status: 'Draft' | 'Sent' | 'Approved' | 'Rejected';
-  
-  // Formal Header Fields
   refNo: string;
   date: string;
   enquiryNo: string;
   location: string;
   subject: string;
   salutation: string;
-  introText: string; // Brief intro
-  introBody: string; // Detailed multi-paragraph letter body
-  closingBody: string; // Closing statement body
-  
-  // Recipient (Editable per quotation)
+  introText: string;
+  introBody: string;
+  closingBody: string;
   recipientName: string;
   recipientAddress: string;
   recipientContactPerson: string;
   recipientPhone: string;
   recipientEmail: string;
-  
-  // Commercial Info
   priceNotes: string;
   bankDetails: string;
-  
-  // Flexible Sections
   sections: Section[];
-
-  // Design Mockups (Images/PDF thumbnails as base64)
   designMockups?: string[];
-  
-  // Closing
   regardsName: string;
   regardsPhone: string;
   regardsEmail: string;
-  
   createdAt: string;
 }
 
@@ -92,9 +80,9 @@ export interface Project {
 
 export interface Branding {
   logo: string;
-  logoBackgroundColor: string; // Added field
-  headerImage?: string; // Uploaded header image override
-  footerImage?: string; // Uploaded footer image override
+  logoBackgroundColor: string;
+  headerImage?: string;
+  footerImage?: string;
   headerText: string;
   footerText: string;
   brandColor: string;
@@ -112,11 +100,21 @@ export interface Branding {
   };
 }
 
+export interface DbConfig {
+  uri: string;
+  dbName: string;
+  apiEndpoint: string;
+  status: 'Connected' | 'Disconnected' | 'Connecting' | 'Error';
+  lastSync: string | null;
+}
+
 export interface AppState {
   currentUser: User | null;
+  token: string | null;
   users: User[];
   clients: Client[];
   projects: Project[];
   quotations: Quotation[];
   branding: Branding;
+  dbConfig: DbConfig;
 }

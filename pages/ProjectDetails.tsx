@@ -135,6 +135,8 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({
       setLocalQuote(JSON.parse(JSON.stringify(quote)));
       setHasUnsavedChanges(false);
       setSaveStatus("idle");
+    } else {
+      setLocalQuote(null);
     }
   }, [selectedQuoteId, quotations, client]);
 
@@ -201,18 +203,9 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({
 
   const handleDeleteVersion = () => {
     if (!localQuote) return;
-    if (
-      window.confirm(
-        `Are you sure you want to delete Quotation Version ${localQuote.version}? This action cannot be undone.`,
-      )
-    ) {
-      onDeleteQuotation(localQuote.id);
-      addNotification(
-        "success",
-        `Version ${localQuote.version} purged from database.`,
-      );
-      setSelectedQuoteId(null); // Reset selection to trigger auto-select of next latest
-    }
+    onDeleteQuotation(localQuote.id);
+    // Note: Confirmation happens in App.tsx. If user cancels, nothing happens.
+    // If they delete, selection will naturally reset when quotations array changes.
   };
 
   const handleSaveToDatabase = async () => {
@@ -797,14 +790,13 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({
 
       setDownloadStep("Finalizing PDF...");
 
-      // Filename construction
       let typeTag = "PEB";
       if (project.workflow === WorkflowType.STRUCTURAL_FABRICATION)
         typeTag = "Structural_Fabrication";
       if (project.workflow === WorkflowType.JOB_WORK) typeTag = "Job_Work";
 
       const clientTag = client.name.replace(/\s+/g, "_");
-      const versionTag = `RNG-${targetQuote.version.toString().padStart(3, "0")}`;
+      const versionTag = `RNS-${targetQuote.version.toString().padStart(3, "0")}`;
       const finalFilename = `RNS_OFFER_${typeTag}_2025-2026_${clientTag}_${versionTag}.pdf`;
 
       doc.save(finalFilename);
@@ -963,10 +955,8 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({
         <div className="space-y-6">
           {localQuote ? (
             <div className="space-y-6 animate-fade-in">
-              {/* Sticky Control Header with Icon-based Version Navigator */}
               <div className="flex flex-wrap items-center justify-between gap-6 bg-[#2E3191] p-6 rounded-[2.5rem] shadow-2xl sticky top-6 z-40 border border-white/10">
                 <div className="flex items-center gap-6">
-                  {/* Version Navigator (Icon with clickable on front) */}
                   <div className="flex items-center gap-2 bg-black/20 p-2 rounded-2xl border border-white/5">
                     <span className="text-[8px] font-black text-white/40 uppercase tracking-widest ml-2 mr-1">
                       Vers:
@@ -1110,7 +1100,7 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                           <Hash size={12} className="text-[#EC1C24]" /> Ref.:
                         </label>
                         <input
-                          className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] outline-none font-bold text-slate-800 transition-all"
+                          className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] focus:bg-white outline-none font-bold text-slate-800 transition-all"
                           value={localQuote.refNo}
                           onChange={(e) =>
                             handleLocalUpdate({ refNo: e.target.value })
@@ -1124,7 +1114,7 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                           Enquiry No.:
                         </label>
                         <input
-                          className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] outline-none font-bold text-slate-800 transition-all"
+                          className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] focus:bg-white outline-none font-bold text-slate-800 transition-all"
                           value={localQuote.enquiryNo}
                           onChange={(e) =>
                             handleLocalUpdate({ enquiryNo: e.target.value })
@@ -1139,7 +1129,7 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                         Document Subject
                       </label>
                       <input
-                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] outline-none font-bold text-slate-800 transition-all"
+                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] focus:bg-white outline-none font-bold text-slate-800 transition-all"
                         value={localQuote.subject}
                         onChange={(e) =>
                           handleLocalUpdate({ subject: e.target.value })
@@ -1153,7 +1143,7 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                         Recipient Client
                       </label>
                       <input
-                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] outline-none font-bold text-slate-800 transition-all"
+                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] focus:bg-white outline-none font-bold text-slate-800 transition-all"
                         value={localQuote.recipientName}
                         onChange={(e) =>
                           handleLocalUpdate({ recipientName: e.target.value })
@@ -1167,7 +1157,7 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                         Address
                       </label>
                       <textarea
-                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] outline-none font-bold text-slate-800 transition-all h-24"
+                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] focus:bg-white outline-none font-bold text-slate-800 transition-all h-24"
                         value={localQuote.recipientAddress}
                         onChange={(e) =>
                           handleLocalUpdate({
@@ -1186,7 +1176,7 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                         Letter Body
                       </label>
                       <textarea
-                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] outline-none font-medium text-slate-600 transition-all h-[310px] leading-relaxed"
+                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] focus:bg-white outline-none font-medium text-slate-600 transition-all h-[310px] leading-relaxed"
                         value={localQuote.introBody}
                         onChange={(e) =>
                           handleLocalUpdate({ introBody: e.target.value })
