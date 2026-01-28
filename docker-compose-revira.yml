@@ -1,0 +1,38 @@
+version: "3"
+
+services:
+  revira-rest-app:
+    image: revira-rest-api-image
+    stdin_open: true
+    command: node server.js
+    env_file:
+      - ".production.env"
+    ports:
+      - "39018:443"
+    networks:
+      - revira-dashboard
+    depends_on:
+      - db-server-revira
+    restart: "unless-stopped"
+
+  db-server-revira:
+    image: mongo:8.0
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: revira_admin
+      MONGO_INITDB_ROOT_PASSWORD: 2b0YlZxL79D
+      MONGO_INITDB_DATABASE: admin
+    ports:
+      - "39029:27017"
+    networks:
+      - revira-dashboard
+    volumes:
+      - db-storage-revira:/data/db
+      - ./docker-entrypoint-initdb.d/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    restart: "unless-stopped"
+
+networks:
+  revira-dashboard:
+    driver: bridge
+volumes:
+  db-storage-revira:
+    driver: local
