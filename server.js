@@ -16,57 +16,57 @@ const mapId = (entity) => {
 };
 
 async function seedDatabase() {
-  // const db = await connectToDatabase();
+  const db = await connectToDatabase();
   // Seed Default Admin User
-  // const adminUser = await db
-  //   .collection("users")
-  //   .findOne({ email: "admin@reviranexgen.com" });
-  // if (!adminUser) {
-  //   console.log("Seeding master administrator: admin@reviranexgen.com");
-  //   await db.collection("users").insertOne({
-  //     name: "Hareram Sharma",
-  //     email: "admin@reviranexgen.com",
-  //     role: "Administrator",
-  //     createdAt: new Date().toISOString(),
-  //   });
-  // }
+  const adminUser = await db
+    .collection("users")
+    .findOne({ email: "admin@reviranexgen.com" });
+  if (!adminUser) {
+    console.log("Seeding master administrator: admin@reviranexgen.com");
+    await db.collection("users").insertOne({
+      name: "Hareram Sharma",
+      email: "admin@reviranexgen.com",
+      role: "Administrator",
+      createdAt: new Date().toISOString(),
+    });
+  }
   // Seed Initial Branding
-  // const brandingCount = await db.collection("branding").countDocuments();
-  // if (brandingCount === 0) {
-  //   console.log("Generating initial branding profile...");
-  //   await db.collection("branding").insertOne({
-  //     logo: "https://reviranexgen.com/assets/logo-with-name.png",
-  //     logoBackgroundColor: "#ffffff",
-  //     headerText: "Blueprint of Commitment - Client Delight.",
-  //     footerText: "This is a computer generated document.",
-  //     brandColor: "#2E3191",
-  //     registry: {
-  //       name: "Revira nexGen Structures Pvt. Ltd.",
-  //       cin: "U16222DL2025PTC459465",
-  //       email: "info@reviranexgen.com",
-  //       website: "www.reviranexgen.com",
-  //       regionalAddress: "Plot No. 302, 3rd Floor Rajat Residency, Nagpur",
-  //       headOfficeAddress: "28, E2 Block, Shivram Park Nangloi Delhi - 110041",
-  //       nagpurOffice:
-  //         "Flat No. 302, 3rd Floor Rajat Residency, Subharambha Society Near Toll Naka, Dabha, Nagpur 440023",
-  //       delhiOffice: "28, E2 Block, Shivram Park Nangloi Delhi - 110041",
-  //       phone1: "+91 839 049 1843",
-  //       phone2: "+91 99684 22442",
-  //     },
-  //   });
-  // }
+  const brandingCount = await db.collection("branding").countDocuments();
+  if (brandingCount === 0) {
+    console.log("Generating initial branding profile...");
+    await db.collection("branding").insertOne({
+      logo: "https://reviranexgen.com/assets/logo-with-name.png",
+      logoBackgroundColor: "#ffffff",
+      headerText: "Blueprint of Commitment - Client Delight.",
+      footerText: "This is a computer generated document.",
+      brandColor: "#2E3191",
+      registry: {
+        name: "Revira nexGen Structures Pvt. Ltd.",
+        cin: "U16222DL2025PTC459465",
+        email: "info@reviranexgen.com",
+        website: "www.reviranexgen.com",
+        regionalAddress: "Plot No. 302, 3rd Floor Rajat Residency, Nagpur",
+        headOfficeAddress: "28, E2 Block, Shivram Park Nangloi Delhi - 110041",
+        nagpurOffice:
+          "Flat No. 302, 3rd Floor Rajat Residency, Subharambha Society Near Toll Naka, Dabha, Nagpur 440023",
+        delhiOffice: "28, E2 Block, Shivram Park Nangloi Delhi - 110041",
+        phone1: "+91 839 049 1843",
+        phone2: "+91 99684 22442",
+      },
+    });
+  }
   // Seed Default DB Config
-  // const configCount = await db.collection("dbConfig").countDocuments();
-  // if (configCount === 0) {
-  //   console.log("Initializing system DB orchestration...");
-  //   await db.collection("dbConfig").insertOne({
-  //     uri: "mongodb://localhost:27017",
-  //     dbName: "revira_nexgen_erp",
-  //     apiEndpoint: `http://localhost:${PORT}/revira/api`,
-  //     status: "Connected",
-  //     lastSync: new Date().toISOString(),
-  //   });
-  // }
+  const configCount = await db.collection("dbConfig").countDocuments();
+  if (configCount === 0) {
+    console.log("Initializing system DB orchestration...");
+    await db.collection("dbConfig").insertOne({
+      uri: "mongodb://localhost:27017",
+      dbName: "revira_nexgen_erp",
+      apiEndpoint: `http://localhost:${PORT}/revira/api`,
+      status: "Connected",
+      lastSync: new Date().toISOString(),
+    });
+  }
 }
 
 app.post("/api/auth/login", async (req, res) => {
@@ -182,7 +182,7 @@ app.put("/api/branding", async (req, res) => {
 async function startServer() {
   try {
     console.log("Initializing Revira nexGen Registry...");
-    const db = await connectToDatabase();
+    await seedDatabase();
     app.listen(PORT, () => {
       console.log(`[SYS] Uplink Established: http://localhost:${PORT}`);
     });
