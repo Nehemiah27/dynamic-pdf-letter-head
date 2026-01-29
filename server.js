@@ -23,7 +23,7 @@ app.use(express.urlencoded({ extended: false }));
 
 // MongoDB Connection
 const MONGO_URI =
-  process.env.MONGO_URI || "mongodb://localhost:27017/revira_erp";
+  process.env.MONGODB_URL || "mongodb://localhost:27017/revira_erp";
 mongoose
   .connect(MONGO_URI)
   .then(() => console.log("Connected to MongoDB via Mongoose"))
