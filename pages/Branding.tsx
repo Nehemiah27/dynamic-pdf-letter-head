@@ -1,5 +1,6 @@
+
 import React, { useState, useRef } from 'react';
-import { Save, RefreshCw, Palette, Building2, Globe, Mail, MapPin, Upload, Image as ImageIcon, Trash2, Link as LinkIcon } from 'lucide-react';
+import { Save, RefreshCw, Palette, Building2, Globe, Mail, MapPin, Upload, Image as ImageIcon, Trash2, Link as LinkIcon, FileSignature } from 'lucide-react';
 import { Branding } from '../types';
 
 interface BrandingProps {
@@ -13,6 +14,7 @@ const BrandingPage: React.FC<BrandingProps> = ({ branding, onUpdateBranding }) =
   const fileInputRef = useRef<HTMLInputElement>(null);
   const headerInputRef = useRef<HTMLInputElement>(null);
   const footerInputRef = useRef<HTMLInputElement>(null);
+  const stampInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,7 +25,7 @@ const BrandingPage: React.FC<BrandingProps> = ({ branding, onUpdateBranding }) =
     }, 800);
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'logo' | 'headerImage' | 'footerImage') => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'logo' | 'headerImage' | 'footerImage' | 'stampSignature') => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -44,7 +46,7 @@ const BrandingPage: React.FC<BrandingProps> = ({ branding, onUpdateBranding }) =
     });
   };
 
-  const clearImage = (field: 'logo' | 'headerImage' | 'footerImage') => {
+  const clearImage = (field: 'logo' | 'headerImage' | 'footerImage' | 'stampSignature') => {
     setFormData(prev => ({ ...prev, [field]: field === 'logo' ? '' : undefined }));
   };
 
@@ -52,7 +54,8 @@ const BrandingPage: React.FC<BrandingProps> = ({ branding, onUpdateBranding }) =
     setFormData(prev => ({
       ...prev,
       headerImage: 'https://reviranexgen.com/assets/header.jpg',
-      footerImage: 'https://reviranexgen.com/assets/footer.jpg'
+      footerImage: 'https://reviranexgen.com/assets/footer.jpg',
+      stampSignature: 'https://reviranexgen.com/assets/stamp.png'
     }));
   };
 
@@ -180,7 +183,7 @@ const BrandingPage: React.FC<BrandingProps> = ({ branding, onUpdateBranding }) =
         {/* Middle/Right: Image Overrides & Registry */}
         <div className="lg:col-span-2 space-y-10">
           
-          {/* Header/Footer Image Uploads */}
+          {/* Header/Footer/Stamp Image Uploads */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6 hover:shadow-2xl transition-all">
               <h3 className="font-black text-[#2E3191] uppercase tracking-widest text-[10px] flex items-center gap-3">
@@ -249,6 +252,43 @@ const BrandingPage: React.FC<BrandingProps> = ({ branding, onUpdateBranding }) =
                     placeholder="https://example.com/footer.jpg"
                     value={formData.footerImage || ''}
                     onChange={e => setFormData({...formData, footerImage: e.target.value})}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Stamp & Signature Section */}
+            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6 hover:shadow-2xl transition-all">
+              <h3 className="font-black text-[#2E3191] uppercase tracking-widest text-[10px] flex items-center gap-3">
+                <FileSignature size={16} className="text-[#EC1C24]" /> Stamp & Signature
+              </h3>
+              <div className="group relative h-40 bg-slate-50/50 border-2 border-dashed border-slate-100 rounded-3xl flex items-center justify-center p-6 transition-all hover:bg-white hover:border-[#2E3191]">
+                {formData.stampSignature ? (
+                  <>
+                    <img src={formData.stampSignature} alt="Stamp" className="max-h-full max-w-full object-contain rounded-xl" />
+                    <div className="absolute inset-0 bg-white/90 flex items-center justify-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button type="button" onClick={() => stampInputRef.current?.click()} className="p-3 bg-[#2E3191] text-white rounded-xl shadow-xl"><Upload size={20}/></button>
+                      <button type="button" onClick={() => clearImage('stampSignature')} className="p-3 bg-[#EC1C24] text-white rounded-xl shadow-xl"><Trash2 size={20}/></button>
+                    </div>
+                  </>
+                ) : (
+                  <button type="button" onClick={() => stampInputRef.current?.click()} className="text-slate-300 flex flex-col items-center gap-2 hover:text-[#2E3191] transition-colors">
+                    <FileSignature size={32} />
+                    <span className="text-[9px] font-black uppercase tracking-widest">Select Stamp Media</span>
+                  </button>
+                )}
+                <input type="file" ref={stampInputRef} className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'stampSignature')} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-[8px] font-black text-slate-300 uppercase tracking-widest ml-1">Or Stamp Asset URL</label>
+                <div className="relative">
+                  <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
+                  <input 
+                    type="text" 
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50/50 border border-slate-100 rounded-xl focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] focus:bg-white outline-none font-bold text-slate-700 text-[10px] transition-all"
+                    placeholder="https://reviranexgen.com/assets/stamp.png"
+                    value={formData.stampSignature || ''}
+                    onChange={e => setFormData({...formData, stampSignature: e.target.value})}
                   />
                 </div>
               </div>

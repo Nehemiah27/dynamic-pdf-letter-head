@@ -1,4 +1,3 @@
-
 export type Role = 'Administrator' | 'Standard';
 
 export interface User {
@@ -7,6 +6,7 @@ export interface User {
   email: string;
   role: Role;
   password?: string;
+  assignedClientIds?: string[];
   avatar?: string;
 }
 
@@ -42,6 +42,7 @@ export interface Quotation {
   id: string;
   projectId: string;
   version: number;
+  workflow: WorkflowType;
   status: 'Draft' | 'Sent' | 'Approved' | 'Rejected';
   refNo: string;
   date: string;
@@ -67,6 +68,44 @@ export interface Quotation {
   createdAt: string;
 }
 
+export interface InvoiceItem {
+  id: string;
+  description: string;
+  hsnCode: string;
+  qty: number;
+  uom: string;
+  ratePerKg: string;
+  percentage: string;
+  rate: number;
+  amount: number;
+}
+
+export interface Invoice {
+  id: string;
+  projectId: string;
+  version: number;
+  status: 'Draft' | 'Sent' | 'Paid' | 'Cancelled';
+  piNo: string;
+  date: string;
+  clientName: string;
+  registeredAddress: string;
+  consigneeAddress: string;
+  gstin: string;
+  woNo: string;
+  dispatchDetails: string;
+  items: InvoiceItem[];
+  taxType: 'Intra-State' | 'Inter-State';
+  bankDetails: {
+    accountName: string;
+    address: string;
+    accountNumber: string;
+    ifscCode: string;
+  };
+  regardsName: string;
+  amountInWords: string;
+  createdAt: string;
+}
+
 export interface Project {
   id: string;
   clientId: string;
@@ -83,6 +122,7 @@ export interface Branding {
   logoBackgroundColor: string;
   headerImage?: string;
   footerImage?: string;
+  stampSignature?: string;
   headerText: string;
   footerText: string;
   brandColor: string;
@@ -97,6 +137,7 @@ export interface Branding {
     delhiOffice: string;
     phone1: string;
     phone2: string;
+    gstin: string;
   };
 }
 
@@ -115,6 +156,7 @@ export interface AppState {
   clients: Client[];
   projects: Project[];
   quotations: Quotation[];
+  invoices: Invoice[];
   branding: Branding;
   dbConfig: DbConfig;
 }

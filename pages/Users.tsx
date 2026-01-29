@@ -11,12 +11,14 @@ import {
   Check,
   X,
   ChevronDown,
-  Lock,
+  KeyRound,
+  Building,
 } from "lucide-react";
-import { User, Role } from "../types";
+import { User, Role, Client } from "../types";
 
 interface UsersPageProps {
   users: User[];
+  clients: Client[];
   onAddUser: (user: Partial<User>) => void;
   onUpdateUser: (id: string, updates: Partial<User>) => void;
   onDeleteUser: (id: string) => void;
@@ -24,6 +26,7 @@ interface UsersPageProps {
 
 const UsersPage: React.FC<UsersPageProps> = ({
   users,
+  clients,
   onAddUser,
   onUpdateUser,
   onDeleteUser,
@@ -36,6 +39,7 @@ const UsersPage: React.FC<UsersPageProps> = ({
     email: "",
     role: "Standard",
     password: "",
+    assignedClientIds: [],
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -50,14 +54,20 @@ const UsersPage: React.FC<UsersPageProps> = ({
 
   const openEditModal = (user: User) => {
     setEditingUser(user);
-    setNewUser({ ...user, password: "" }); // Don't show existing password, keep blank to not change unless typed
+    setNewUser({ ...user });
     setShowModal(true);
   };
 
   const closeModal = () => {
     setShowModal(false);
     setEditingUser(null);
-    setNewUser({ name: "", email: "", role: "Standard", password: "" });
+    setNewUser({
+      name: "",
+      email: "",
+      role: "Standard",
+      password: "",
+      assignedClientIds: [],
+    });
   };
 
   const filteredUsers = users.filter(
@@ -65,6 +75,18 @@ const UsersPage: React.FC<UsersPageProps> = ({
       u.name.toLowerCase().includes(search.toLowerCase()) ||
       u.email.toLowerCase().includes(search.toLowerCase()),
   );
+
+  const toggleClientAssignment = (clientId: string) => {
+    const current = newUser.assignedClientIds || [];
+    if (current.includes(clientId)) {
+      setNewUser({
+        ...newUser,
+        assignedClientIds: current.filter((id) => id !== clientId),
+      });
+    } else {
+      setNewUser({ ...newUser, assignedClientIds: [...current, clientId] });
+    }
+  };
 
   return (
     <div className="space-y-6 bg-white animate-fade-in relative min-h-full">
@@ -203,8 +225,8 @@ const UsersPage: React.FC<UsersPageProps> = ({
             onClick={closeModal}
           ></div>
 
-          <div className="relative bg-white rounded-[3rem] w-full max-w-md shadow-2xl border border-slate-100 animate-fade-in overflow-hidden">
-            <div className="p-8 sm:p-10 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
+          <div className="relative bg-white rounded-[3rem] w-full max-w-2xl shadow-2xl border border-slate-100 animate-fade-in overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="p-8 sm:p-10 border-b border-slate-50 flex items-center justify-between bg-slate-50/30 shrink-0">
               <div className="flex items-center gap-5">
                 <div className="w-14 h-14 rounded-[1.5rem] bg-[#2E3191] text-white flex items-center justify-center shadow-2xl shadow-[#2E3191]/20">
                   {editingUser ? <UserCog size={28} /> : <UserPlus size={28} />}
@@ -226,37 +248,36 @@ const UsersPage: React.FC<UsersPageProps> = ({
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-8 sm:p-10 space-y-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="block text-[10px] font-black text-[#2E3191] uppercase tracking-widest ml-1">
-                    Legal Name
-                  </label>
-                  <input
-                    required
-                    type="text"
-                    className="w-full px-6 py-4 bg-slate-50/50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] focus:bg-white outline-none font-bold text-slate-800 transition-all placeholder:text-slate-300"
-                    value={newUser.name}
-                    onChange={(e) =>
-                      setNewUser({ ...newUser, name: e.target.value })
-                    }
-                    placeholder="Personnel name..."
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-[10px] font-black text-[#2E3191] uppercase tracking-widest ml-1">
-                    Corporate Email (Login ID)
-                  </label>
-                  <div className="relative group">
-                    <Mail
-                      className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#2E3191] transition-colors"
-                      size={18}
+            <form
+              onSubmit={handleSubmit}
+              className="p-8 sm:p-10 space-y-8 overflow-y-auto flex-1"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-[#2E3191] uppercase tracking-widest ml-1">
+                      Legal Name
+                    </label>
+                    <input
+                      required
+                      type="text"
+                      className="w-full px-6 py-4 bg-slate-50/50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] focus:bg-white outline-none font-bold text-slate-800 transition-all placeholder:text-slate-300 text-sm"
+                      value={newUser.name}
+                      onChange={(e) =>
+                        setNewUser({ ...newUser, name: e.target.value })
+                      }
+                      placeholder="Personnel name..."
                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-[#2E3191] uppercase tracking-widest ml-1">
+                      Corporate Email
+                    </label>
                     <input
                       required
                       type="email"
-                      className="w-full pl-14 pr-6 py-4 bg-slate-50/50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] focus:bg-white outline-none font-bold text-slate-800 transition-all placeholder:text-slate-300"
+                      className="w-full px-6 py-4 bg-slate-50/50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] focus:bg-white outline-none font-bold text-slate-800 transition-all placeholder:text-slate-300 text-sm"
                       value={newUser.email}
                       onChange={(e) =>
                         setNewUser({ ...newUser, email: e.target.value })
@@ -264,57 +285,122 @@ const UsersPage: React.FC<UsersPageProps> = ({
                       placeholder="name@reviranexgen.com"
                     />
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <label className="block text-[10px] font-black text-[#2E3191] uppercase tracking-widest ml-1">
-                    Security Token (Password)
-                  </label>
-                  <div className="relative group">
-                    <Lock
-                      className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#EC1C24] transition-colors"
-                      size={18}
-                    />
-                    <input
-                      required={!editingUser}
-                      type="password"
-                      className="w-full pl-14 pr-6 py-4 bg-slate-50/50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-[#EC1C24]/5 focus:border-[#EC1C24] focus:bg-white outline-none font-bold text-slate-800 transition-all placeholder:text-slate-300"
-                      value={newUser.password}
-                      onChange={(e) =>
-                        setNewUser({ ...newUser, password: e.target.value })
-                      }
-                      placeholder={
-                        editingUser
-                          ? "Leave blank to keep current"
-                          : "Set user password..."
-                      }
-                    />
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-[#2E3191] uppercase tracking-widest ml-1">
+                      System Password
+                    </label>
+                    <div className="relative">
+                      <KeyRound
+                        className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"
+                        size={18}
+                      />
+                      <input
+                        required={!editingUser}
+                        type="password"
+                        className="w-full pl-14 pr-6 py-4 bg-slate-50/50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-[#2E3191]/5 focus:border-[#2E3191] focus:bg-white outline-none font-bold text-slate-800 transition-all placeholder:text-slate-300 text-sm"
+                        value={newUser.password}
+                        onChange={(e) =>
+                          setNewUser({ ...newUser, password: e.target.value })
+                        }
+                        placeholder={
+                          editingUser
+                            ? "Leave blank to keep same"
+                            : "Secure password..."
+                        }
+                      />
+                    </div>
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <label className="block text-[10px] font-black text-[#2E3191] uppercase tracking-widest ml-1">
-                    Authorization Role
-                  </label>
-                  <div className="relative group/select">
-                    <select
-                      className="w-full px-6 py-4 bg-white border-2 border-slate-100 rounded-2xl focus:ring-4 focus:ring-[#2E3191]/10 focus:border-[#2E3191] outline-none font-black text-slate-800 transition-all appearance-none cursor-pointer hover:border-[#2E3191]/30 hover:shadow-lg hover:shadow-[#2E3191]/5"
-                      value={newUser.role}
-                      onChange={(e) =>
-                        setNewUser({ ...newUser, role: e.target.value as Role })
-                      }
-                    >
-                      <option value="Standard">Standard</option>
-                      <option value="Administrator">Administrator</option>
-                    </select>
-                    <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-300 group-hover/select:text-[#2E3191] group-hover/select:scale-110 transition-all duration-300">
-                      <ChevronDown size={20} />
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-[#2E3191] uppercase tracking-widest ml-1">
+                      Authorization Role
+                    </label>
+                    <div className="relative group/select">
+                      <select
+                        className="w-full px-6 py-4 bg-white border-2 border-slate-100 rounded-2xl focus:ring-4 focus:ring-[#2E3191]/10 focus:border-[#2E3191] outline-none font-black text-slate-800 transition-all appearance-none cursor-pointer hover:border-[#2E3191]/30 hover:shadow-lg hover:shadow-[#2E3191]/5 text-sm"
+                        value={newUser.role}
+                        onChange={(e) =>
+                          setNewUser({
+                            ...newUser,
+                            role: e.target.value as Role,
+                          })
+                        }
+                      >
+                        <option value="Standard">Standard</option>
+                        <option value="Administrator">Administrator</option>
+                      </select>
+                      <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-300 group-hover/select:text-[#2E3191] group-hover/select:scale-110 transition-all duration-300">
+                        <ChevronDown size={20} />
+                      </div>
                     </div>
                   </div>
                 </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <label className="block text-[10px] font-black text-[#2E3191] uppercase tracking-widest ml-1">
+                      Client Authorization
+                    </label>
+                    <Building size={16} className="text-[#EC1C24]" />
+                  </div>
+
+                  {newUser.role === "Administrator" ? (
+                    <div className="bg-emerald-50 border border-emerald-100 p-6 rounded-[2rem] flex flex-col items-center justify-center text-center space-y-3">
+                      <Shield size={32} className="text-emerald-500" />
+                      <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">
+                        Full System Access Granted
+                      </p>
+                      <p className="text-[9px] text-emerald-600 leading-relaxed italic">
+                        Administrators bypass client constraints and view all
+                        records.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+                      {clients.length > 0 ? (
+                        clients.map((client) => (
+                          <div
+                            key={client.id}
+                            onClick={() => toggleClientAssignment(client.id)}
+                            className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between group/client ${
+                              newUser.assignedClientIds?.includes(client.id)
+                                ? "bg-blue-50 border-[#2E3191] shadow-md shadow-blue-500/5"
+                                : "bg-white border-slate-50 hover:border-slate-200"
+                            }`}
+                          >
+                            <div className="overflow-hidden">
+                              <p
+                                className={`text-[11px] font-black uppercase tracking-tight truncate ${newUser.assignedClientIds?.includes(client.id) ? "text-[#2E3191]" : "text-slate-500"}`}
+                              >
+                                {client.name}
+                              </p>
+                              <p className="text-[8px] font-bold text-slate-300 uppercase tracking-widest">
+                                {client.gstin}
+                              </p>
+                            </div>
+                            <div
+                              className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${
+                                newUser.assignedClientIds?.includes(client.id)
+                                  ? "bg-[#2E3191] text-white scale-110"
+                                  : "bg-slate-50 text-transparent group-hover/client:bg-slate-100"
+                              }`}
+                            >
+                              <Check size={14} />
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-[10px] text-slate-300 text-center py-10 uppercase font-black italic tracking-widest">
+                          No clients registered in ecosystem
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div className="flex gap-4 pt-4">
+              <div className="flex gap-4 pt-4 shrink-0">
                 <button
                   type="button"
                   onClick={closeModal}
@@ -326,13 +412,18 @@ const UsersPage: React.FC<UsersPageProps> = ({
                   type="submit"
                   className="flex-1 px-4 py-4 bg-[#EC1C24] text-white font-black rounded-2xl hover:bg-[#d11920] transition-all shadow-2xl shadow-[#EC1C24]/30 uppercase text-[10px] tracking-widest active:scale-95"
                 >
-                  {editingUser ? "Save Changes" : "Provision User"}
+                  {editingUser ? "Sync Identity" : "Provision Protocol"}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+      `}</style>
     </div>
   );
 };

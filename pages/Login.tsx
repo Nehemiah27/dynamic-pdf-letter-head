@@ -10,11 +10,10 @@ import {
   HelpCircle,
   KeyRound,
   Fingerprint,
-  AlertCircle,
 } from "lucide-react";
 
 interface LoginProps {
-  onLogin: (email: string, password: string) => Promise<void>;
+  onLogin: (email: string, password: string) => Promise<boolean>;
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
@@ -30,12 +29,14 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setError("");
 
     try {
-      await onLogin(email, password);
-      navigate("/");
-    } catch (err: any) {
-      console.error("Login caught error:", err);
-      // Display the actual error message from the backend or store
-      setError(err.message || "An unexpected error occurred during login");
+      const success = await onLogin(email, password);
+      if (success) {
+        navigate("/");
+      } else {
+        setError("Invalid server-side credentials or cluster timeout");
+      }
+    } catch (e) {
+      setError("Communication failure with runtime");
     } finally {
       setIsLoading(false);
     }
@@ -52,11 +53,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               className="h-14 mx-auto"
             />
           </div>
-          <div className="flex items-center justify-center gap-3 text-[#2E3191] font-black tracking-[0.3em] uppercase text-[9px]">
-            <div className="h-0.5 w-6 bg-[#EC1C24]"></div>
-            <span>NestJS / MongoDB Compass Local</span>
-            <div className="h-0.5 w-6 bg-[#EC1C24]"></div>
-          </div>
         </div>
 
         <div className="bg-white p-8 sm:p-10 rounded-[3rem] shadow-[0_32px_64px_-16px_rgba(46,49,145,0.08)] space-y-6 border border-slate-100 relative overflow-hidden group">
@@ -68,8 +64,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 Access Control
               </h2>
               <p className="text-slate-400 text-[9px] mt-1 font-black uppercase tracking-widest flex items-center gap-2">
-                <ShieldCheck size={11} className="text-[#EC1C24]" /> MongoDB
-                Compass Local v1.42
+                <ShieldCheck size={11} className="text-[#EC1C24]" /> Secure
+                Ecosystem Access
               </p>
             </div>
             <div className="flex items-center gap-2 px-3 py-1 bg-emerald-50 rounded-full border border-emerald-100">
@@ -80,38 +76,13 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </div>
           </div>
 
-          <div className="bg-[#2E3191]/5 border border-[#2E3191]/10 rounded-2xl p-4 space-y-2">
-            <div className="flex items-center gap-2 mb-1">
-              <Fingerprint size={14} className="text-[#2E3191]" />
-              <span className="text-[9px] font-black text-[#2E3191] uppercase tracking-widest">
-                Master Credentials
-              </span>
-            </div>
-            <div className="flex justify-between items-center text-[10px]">
-              <span className="text-slate-400 font-bold uppercase">
-                Login ID:
-              </span>
-              <span className="font-mono font-bold text-[#2E3191] bg-white px-2 py-0.5 rounded border border-[#2E3191]/5 select-all">
-                admin@reviranexgen.com
-              </span>
-            </div>
-            <div className="flex justify-between items-center text-[10px]">
-              <span className="text-slate-400 font-bold uppercase">
-                Token (Pass):
-              </span>
-              <span className="font-mono font-bold text-[#EC1C24] bg-white px-2 py-0.5 rounded border border-[#EC1C24]/5 select-all">
-                admin@123
-              </span>
-            </div>
-          </div>
-
           <form onSubmit={handleLogin} className="space-y-5 relative">
             {error && (
-              <div className="p-4 bg-red-50 border border-red-100 rounded-2xl text-red-600 text-[10px] font-black flex items-start gap-3 animate-shake uppercase tracking-tight">
-                <div className="w-8 h-8 rounded-xl bg-red-100 flex items-center justify-center shrink-0 mt-0.5">
-                  <AlertCircle size={16} />
+              <div className="p-4 bg-red-50 border border-red-100 rounded-2xl text-red-600 text-[10px] font-black flex items-center gap-3 animate-shake uppercase tracking-tight">
+                <div className="w-8 h-8 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
+                  <Info size={16} />
                 </div>
-                <div className="flex-1 leading-tight py-1">{error}</div>
+                {error}
               </div>
             )}
 
@@ -179,14 +150,39 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </button>
           </form>
 
+          {/* Master Credentials Information Box relocated after Verify Identity button */}
+          <div className="bg-[#2E3191]/5 border border-[#2E3191]/10 rounded-2xl p-4 space-y-2 mt-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Fingerprint size={14} className="text-[#2E3191]" />
+              <span className="text-[9px] font-black text-[#2E3191] uppercase tracking-widest">
+                Master Credentials
+              </span>
+            </div>
+            <div className="flex justify-between items-center text-[10px]">
+              <span className="text-slate-400 font-bold uppercase">
+                Login ID:
+              </span>
+              <span className="font-mono font-bold text-[#2E3191] bg-white px-2 py-0.5 rounded border border-[#2E3191]/5 select-all">
+                admin@reviranexgen.com
+              </span>
+            </div>
+            <div className="flex justify-between items-center text-[10px]">
+              <span className="text-slate-400 font-bold uppercase">
+                Token (Pass):
+              </span>
+              <span className="font-mono font-bold text-[#EC1C24] bg-white px-2 py-0.5 rounded border border-[#EC1C24]/5 select-all">
+                admin123
+              </span>
+            </div>
+          </div>
+
           <div className="pt-2 border-t border-slate-50">
             <div className="p-1">
               <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2">
                 Local System Access Only
               </h4>
               <p className="text-[9px] text-slate-300 leading-relaxed italic">
-                Unauthorized access attempts are logged to the local MongoDB
-                Compass audit trail.
+                Unauthorized access attempts are logged to the audit trail.
               </p>
             </div>
           </div>
