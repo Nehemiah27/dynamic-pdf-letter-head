@@ -1,6 +1,6 @@
 db.auth('revira_admin', '2b0YlZxL79D');
 
-db = db.getSiblingDB('revira_nexgen_erp');
+db = db.getSiblingDB('revira_local_compass');
 
 db.createUser({
   user: 'revira_db_owner',
@@ -8,7 +8,7 @@ db.createUser({
   roles: [
     {
       role: 'dbOwner',
-      db: 'revira_nexgen_erp'
+      db: 'revira_local_compass'
     }
   ]
 });

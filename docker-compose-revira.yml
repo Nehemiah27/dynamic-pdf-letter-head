@@ -8,7 +8,7 @@ services:
     env_file:
       - ".production.env"
     ports:
-      - "39018:443"
+      - "39003:443"
     networks:
       - revira-dashboard
     depends_on:
@@ -22,7 +22,7 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: 2b0YlZxL79D
       MONGO_INITDB_DATABASE: admin
     ports:
-      - "39029:27017"
+      - "39024:27017"
     networks:
       - revira-dashboard
     volumes:

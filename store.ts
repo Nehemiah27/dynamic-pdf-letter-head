@@ -52,9 +52,9 @@ const DEFAULT_CLIENT: Client = {
 };
 
 const INITIAL_DB_CONFIG: DbConfig = {
-  uri: "mongodb://localhost:27017",
+  uri: "mongodb://revira_admin:2b0YlZxL79D@66.116.205.151:39004",
   dbName: "revira_local_compass",
-  apiEndpoint: "/api", // Changed to relative for unified backend
+  apiEndpoint: "/revira/api",
   status: "Disconnected",
   lastSync: new Date().toISOString(),
 };
