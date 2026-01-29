@@ -279,11 +279,11 @@ export const NestApiService = {
 };
 
 export const loadState = async (): Promise<AppState> => {
-  let isServerUp = false;
-  try {
-    const res = await fetch("/health");
-    isServerUp = res.ok;
-  } catch (e) {}
+  let isServerUp = true;
+  // try {
+  //   const res = await fetch("/health");
+  //   isServerUp = res.ok;
+  // } catch (e) {}
 
   const [users, clients, projects, quotations, invoices, branding] =
     await Promise.all([
