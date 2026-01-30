@@ -1,3 +1,4 @@
+
 {
   "name": "revira-nexgen-erp",
   "homepage": "/revira/",
@@ -8,7 +9,7 @@
   "main": "server.ts",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && esbuild index.tsx --platform=node --packages=external --bundle --format=esm --outdir=dist",
+    "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
