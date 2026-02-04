@@ -4,7 +4,7 @@ services:
   revira-rest-app:
     image: revira-rest-api-image
     stdin_open: true
-    command: node server.js
+    command: node dist/index.cjs
     env_file:
       - ".production.env"
     ports:
@@ -16,23 +16,21 @@ services:
     restart: "unless-stopped"
 
   db-server-revira:
-    image: mongo:8.0
+    image: postgres:16
+    container_name: revira-db
     environment:
-      MONGO_INITDB_ROOT_USERNAME: revira_admin
-      MONGO_INITDB_ROOT_PASSWORD: 2b0YlZxL79D
-      MONGO_INITDB_DATABASE: admin
-    ports:
-      - "39004:27017"
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: appdb
+    volumes:
+      - revira-db-data:/var/lib/postgresql/data
     networks:
       - revira-dashboard
-    volumes:
-      - db-storage-revira:/data/db
-      - ./docker-entrypoint-initdb.d/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
     restart: "unless-stopped"
 
 networks:
   revira-dashboard:
     driver: bridge
 volumes:
-  db-storage-revira:
+  revira-db-data:
     driver: local
