@@ -31,6 +31,7 @@ services:
 networks:
   revira-dashboard:
     driver: bridge
+
 volumes:
   revira-db-data:
     driver: local
