@@ -37,7 +37,7 @@ export function setupAuth(app: Express) {
     cookie: {
       secure: app.get("env") === "production",
       maxAge: 1000 * 60 * 60 * 24, // 1 day
-    }
+    },
   };
 
   if (app.get("env") === "production") {
@@ -76,7 +76,8 @@ export function setupAuth(app: Express) {
   app.post("/api/login", (req, res, next) => {
     passport.authenticate("local", (err, user, info) => {
       if (err) return next(err);
-      if (!user) return res.status(401).json({ message: "Invalid credentials" });
+      if (!user)
+        return res.status(401).json({ message: "Invalid credentials" });
       req.login(user, (err) => {
         if (err) return next(err);
         return res.status(200).json(user);
@@ -92,21 +93,35 @@ export function setupAuth(app: Express) {
   });
 
   app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    if (!req.isAuthenticated())
+      return res.status(401).json({ message: "Unauthorized" });
     res.json(req.user);
   });
-  
-  // Seed the admin user
-  (async () => {
+
+  app.post("/api/default-user", async (req, res, next) => {
     const existing = await storage.getUserByUsername("admin@reviranexgen.com");
     if (!existing) {
       const hashedPassword = await hashPassword("Admin@121");
       await storage.createUser({
         username: "admin@reviranexgen.com",
         password: hashedPassword,
-        name: "Admin User"
+        name: "Admin User",
       });
       console.log("Admin user seeded");
     }
-  })();
+    res.sendStatus(200);
+  });
+
+  // (async () => {
+  //   const existing = await storage.getUserByUsername("admin@reviranexgen.com");
+  //   if (!existing) {
+  //     const hashedPassword = await hashPassword("Admin@121");
+  //     await storage.createUser({
+  //       username: "admin@reviranexgen.com",
+  //       password: hashedPassword,
+  //       name: "Admin User",
+  //     });
+  //     console.log("Admin user seeded");
+  //   }
+  // })();
 }
