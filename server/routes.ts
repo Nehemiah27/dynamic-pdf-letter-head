@@ -13,13 +13,13 @@ export async function registerRoutes(
   setupAuth(app);
 
   // Client routes
-  app.get(api.clients.list.path, async (req, res) => {
+  app.get(api.clients.list.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     const clients = await storage.getClients();
     res.json(clients);
   });
 
-  app.get(api.clients.get.path, async (req, res) => {
+  app.get(api.clients.get.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     const client = await storage.getClient(Number(req.params.id));
     if (!client) {
@@ -28,7 +28,7 @@ export async function registerRoutes(
     res.json(client);
   });
 
-  app.post(api.clients.create.path, async (req, res) => {
+  app.post(api.clients.create.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const input = api.clients.create.input.parse(req.body);
@@ -44,7 +44,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put(api.clients.update.path, async (req, res) => {
+  app.put(api.clients.update.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const input = api.clients.update.input.parse(req.body);
@@ -63,7 +63,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete(api.clients.delete.path, async (req, res) => {
+  app.delete(api.clients.delete.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     const deleted = await storage.deleteClient(Number(req.params.id));
     if (!deleted) {
@@ -73,13 +73,13 @@ export async function registerRoutes(
   });
 
   // Project routes
-  app.get(api.projects.list.path, async (req, res) => {
+  app.get(api.projects.list.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     const projects = await storage.getProjects();
     res.json(projects);
   });
 
-  app.get(api.projects.get.path, async (req, res) => {
+  app.get(api.projects.get.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     const project = await storage.getProject(Number(req.params.id));
     if (!project) {
@@ -88,7 +88,7 @@ export async function registerRoutes(
     res.json(project);
   });
 
-  app.post(api.projects.create.path, async (req, res) => {
+  app.post(api.projects.create.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const input = api.projects.create.input.parse(req.body);
@@ -104,7 +104,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put(api.projects.update.path, async (req, res) => {
+  app.put(api.projects.update.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const input = api.projects.update.input.parse(req.body);
@@ -123,7 +123,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete(api.projects.delete.path, async (req, res) => {
+  app.delete(api.projects.delete.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     const deleted = await storage.deleteProject(Number(req.params.id));
     if (!deleted) {
@@ -133,13 +133,13 @@ export async function registerRoutes(
   });
 
   // Quotation routes
-  app.get(api.quotations.list.path, async (req, res) => {
+  app.get(api.quotations.list.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     const quotations = await storage.getQuotations();
     res.json(quotations);
   });
 
-  app.get(api.quotations.get.path, async (req, res) => {
+  app.get(api.quotations.get.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     const quotation = await storage.getQuotation(Number(req.params.id));
     if (!quotation) {
@@ -148,7 +148,7 @@ export async function registerRoutes(
     res.json(quotation);
   });
 
-  app.get(api.quotations.getByProject.path, async (req, res) => {
+  app.get(api.quotations.getByProject.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     const quotation = await storage.getQuotationByProjectId(Number(req.params.projectId));
     if (!quotation) {
@@ -157,7 +157,7 @@ export async function registerRoutes(
     res.json(quotation);
   });
 
-  app.post(api.quotations.create.path, async (req, res) => {
+  app.post(api.quotations.create.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const input = api.quotations.create.input.parse(req.body);
@@ -173,7 +173,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put(api.quotations.update.path, async (req, res) => {
+  app.put(api.quotations.update.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const input = api.quotations.update.input.parse(req.body);
@@ -192,7 +192,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete(api.quotations.delete.path, async (req, res) => {
+  app.delete(api.quotations.delete.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     // First delete all items associated with this quotation
     await storage.deleteQuotationItemsByQuotationId(Number(req.params.id));
@@ -281,13 +281,13 @@ export async function registerRoutes(
   });
 
   // Quotation Items routes
-  app.get(api.quotationItems.list.path, async (req, res) => {
+  app.get(api.quotationItems.list.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     const items = await storage.getQuotationItems(Number(req.params.quotationId));
     res.json(items);
   });
 
-  app.post(api.quotationItems.create.path, async (req, res) => {
+  app.post(api.quotationItems.create.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const input = api.quotationItems.create.input.parse(req.body);
@@ -306,7 +306,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put(api.quotationItems.update.path, async (req, res) => {
+  app.put(api.quotationItems.update.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const input = api.quotationItems.update.input.parse(req.body);
@@ -325,7 +325,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete(api.quotationItems.delete.path, async (req, res) => {
+  app.delete(api.quotationItems.delete.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     const deleted = await storage.deleteQuotationItem(Number(req.params.id));
     if (!deleted) {
@@ -347,7 +347,7 @@ export async function registerRoutes(
   });
 
   // Branding routes
-  app.get(api.branding.get.path, async (req, res) => {
+  app.get(api.branding.get.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     let brandingData = await storage.getBranding();
     if (!brandingData) {
@@ -370,7 +370,7 @@ export async function registerRoutes(
     res.json(brandingData);
   });
 
-  app.put(api.branding.update.path, async (req, res) => {
+  app.put(api.branding.update.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const input = api.branding.update.input.parse(req.body);
@@ -406,13 +406,13 @@ export async function registerRoutes(
   });
 
   // Invoice routes
-  app.get(api.invoices.list.path, async (req, res) => {
+  app.get(api.invoices.list.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     const invoicesList = await storage.getInvoices();
     res.json(invoicesList);
   });
 
-  app.get(api.invoices.get.path, async (req, res) => {
+  app.get(api.invoices.get.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     const invoice = await storage.getInvoice(Number(req.params.id));
     if (!invoice) {
@@ -421,7 +421,7 @@ export async function registerRoutes(
     res.json(invoice);
   });
 
-  app.get(api.invoices.getByProject.path, async (req, res) => {
+  app.get(api.invoices.getByProject.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     const invoice = await storage.getInvoiceByProjectId(Number(req.params.projectId));
     if (!invoice) {
@@ -430,7 +430,7 @@ export async function registerRoutes(
     res.json(invoice);
   });
 
-  app.post(api.invoices.create.path, async (req, res) => {
+  app.post(api.invoices.create.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const input = api.invoices.create.input.parse(req.body);
@@ -446,7 +446,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put(api.invoices.update.path, async (req, res) => {
+  app.put(api.invoices.update.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const input = api.invoices.update.input.parse(req.body);
@@ -465,7 +465,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete(api.invoices.delete.path, async (req, res) => {
+  app.delete(api.invoices.delete.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     await storage.deleteInvoiceItemsByInvoiceId(Number(req.params.id));
     const deleted = await storage.deleteInvoice(Number(req.params.id));
@@ -541,13 +541,13 @@ export async function registerRoutes(
   });
 
   // Invoice Items routes
-  app.get(api.invoiceItems.list.path, async (req, res) => {
+  app.get(api.invoiceItems.list.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     const items = await storage.getInvoiceItems(Number(req.params.invoiceId));
     res.json(items);
   });
 
-  app.post(api.invoiceItems.create.path, async (req, res) => {
+  app.post(api.invoiceItems.create.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const input = api.invoiceItems.create.input.parse(req.body);
@@ -566,7 +566,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put(api.invoiceItems.update.path, async (req, res) => {
+  app.put(api.invoiceItems.update.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const input = api.invoiceItems.update.input.parse(req.body);
@@ -585,7 +585,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete(api.invoiceItems.delete.path, async (req, res) => {
+  app.delete(api.invoiceItems.delete.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     const deleted = await storage.deleteInvoiceItem(Number(req.params.id));
     if (!deleted) {
@@ -595,7 +595,7 @@ export async function registerRoutes(
   });
 
   // User management routes
-  app.get(api.users.list.path, async (req, res) => {
+  app.get(api.users.list.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     const users = await storage.getUsers();
     // Remove passwords from response
@@ -603,7 +603,7 @@ export async function registerRoutes(
     res.json(sanitizedUsers);
   });
 
-  app.get(api.users.get.path, async (req, res) => {
+  app.get(api.users.get.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     const user = await storage.getUser(Number(req.params.id));
     if (!user) {
@@ -614,7 +614,7 @@ export async function registerRoutes(
     res.json(sanitizedUser);
   });
 
-  app.post(api.users.create.path, async (req, res) => {
+  app.post(api.users.create.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     
     // Check if current user is Administrator
@@ -653,7 +653,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put(api.users.update.path, async (req, res) => {
+  app.put(api.users.update.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     
     // Check if current user is Administrator
@@ -693,7 +693,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete(api.users.delete.path, async (req, res) => {
+  app.delete(api.users.delete.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     
     // Check if current user is Administrator
@@ -715,7 +715,7 @@ export async function registerRoutes(
     res.status(204).send();
   });
 
-  app.get(api.users.getClientAssignments.path, async (req, res) => {
+  app.get(api.users.getClientAssignments.path.replace("/revira",""), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     
     const assignments = await storage.getUserClientAssignments(Number(req.params.id));
