@@ -47,7 +47,7 @@ export default function ClientsPage() {
   const { data: user } = useUser();
 
   const { data: clients, isLoading } = useQuery<Client[]>({
-    queryKey: ["/revira/api/clients"],
+    queryKey: ["/api/clients"],
   });
 
   const form = useForm<ClientFormData>({
@@ -64,11 +64,11 @@ export default function ClientsPage() {
 
   const createMutation = useMutation({
     mutationFn: async (data: ClientFormData) => {
-      const res = await apiRequest("POST", "/revira/api/clients", data);
+      const res = await apiRequest("POST", "/api/clients", data);
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/revira/api/clients"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       form.reset();
       setOpen(false);
       toast({
@@ -87,11 +87,11 @@ export default function ClientsPage() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: ClientFormData }) => {
-      const res = await apiRequest("PUT", `/revira/api/clients/${id}`, data);
+      const res = await apiRequest("PUT", `/api/clients/${id}`, data);
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/revira/api/clients"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       form.reset();
       setEditClient(null);
       setOpen(false);
@@ -111,10 +111,10 @@ export default function ClientsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/revira/api/clients/${id}`);
+      await apiRequest("DELETE", `/api/clients/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/revira/api/clients"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       toast({
         title: "Success",
         description: "Client deleted successfully",

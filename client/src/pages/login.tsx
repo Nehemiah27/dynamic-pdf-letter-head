@@ -29,7 +29,7 @@ export default function LoginPage() {
   const { mutate: login, isPending } = useLogin();
   
   const { data: branding } = useQuery<Branding>({
-    queryKey: ["/revira/api/branding/public"],
+    queryKey: ["/api/branding/public"],
     staleTime: 5 * 60 * 1000,
   });
 
@@ -43,7 +43,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (user) {
-      setLocation("/revira/dashboard");
+      setLocation("/dashboard");
     }
   }, [user, setLocation]);
 

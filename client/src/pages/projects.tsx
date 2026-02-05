@@ -63,11 +63,11 @@ export default function ProjectsPage() {
   const { data: user } = useUser();
 
   const { data: projects, isLoading } = useQuery<Project[]>({
-    queryKey: ["/revira/api/projects"],
+    queryKey: ["/api/projects"],
   });
 
   const { data: clients, isLoading: clientsLoading } = useQuery<Client[]>({
-    queryKey: ["/revira/api/clients"],
+    queryKey: ["/api/clients"],
   });
 
   const form = useForm<ProjectFormData>({
@@ -82,13 +82,13 @@ export default function ProjectsPage() {
 
   const createMutation = useMutation({
     mutationFn: async (data: ProjectFormData) => {
-      return apiRequest("POST", "/revira/api/projects", {
+      return apiRequest("POST", "/api/projects", {
         ...data,
         clientId: Number(data.clientId),
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/revira/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       toast({
         title: "Project created",
         description: "The project has been created successfully.",
@@ -107,13 +107,13 @@ export default function ProjectsPage() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: ProjectFormData }) => {
-      return apiRequest("PUT", `/revira/api/projects/${id}`, {
+      return apiRequest("PUT", `/api/projects/${id}`, {
         ...data,
         clientId: Number(data.clientId),
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/revira/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       toast({
         title: "Project updated",
         description: "The project has been updated successfully.",
@@ -133,10 +133,10 @@ export default function ProjectsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest("DELETE", `/revira/api/projects/${id}`);
+      return apiRequest("DELETE", `/api/projects/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/revira/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       toast({
         title: "Project deleted",
         description: "The project has been deleted successfully.",
@@ -476,7 +476,7 @@ export default function ProjectsPage() {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 rounded-md text-red-400 hover:text-red-600 hover:bg-red-50"
-                      onClick={() => setLocation(`/revira/projects/${project.id}/quotation`)}
+                      onClick={() => setLocation(`/projects/${project.id}/quotation`)}
                       data-testid={`button-quotation-${project.id}`}
                       title="Create Quotation"
                     >
@@ -486,7 +486,7 @@ export default function ProjectsPage() {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 rounded-md text-slate-400 hover:text-green-600 hover:bg-green-50"
-                      onClick={() => setLocation(`/revira/projects/${project.id}/invoice`)}
+                      onClick={() => setLocation(`/projects/${project.id}/invoice`)}
                       data-testid={`button-invoice-${project.id}`}
                       title="Create Invoice"
                     >

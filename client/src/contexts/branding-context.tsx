@@ -52,7 +52,7 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
   const { data: user } = useUser();
   
   const { data: branding, isLoading } = useQuery<Branding>({
-    queryKey: ["/revira/api/branding"],
+    queryKey: ["/api/branding"],
     staleTime: 5 * 60 * 1000,
     enabled: !!user,
     refetchOnMount: true,

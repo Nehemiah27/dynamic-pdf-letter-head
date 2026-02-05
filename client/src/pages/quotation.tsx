@@ -370,9 +370,9 @@ export default function QuotationPage() {
   });
 
   const { data: project, isLoading: projectLoading } = useQuery<Project>({
-    queryKey: ["/revira/api/projects", projectId],
+    queryKey: ["/api/projects", projectId],
     queryFn: async () => {
-      const res = await fetch(`/revira/api/projects/${projectId}`, { credentials: "include" });
+      const res = await fetch(`/api/projects/${projectId}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch project");
       return res.json();
     },
@@ -380,9 +380,9 @@ export default function QuotationPage() {
   });
 
   const { data: client, isLoading: clientLoading } = useQuery<Client>({
-    queryKey: ["/revira/api/clients", project?.clientId],
+    queryKey: ["/api/clients", project?.clientId],
     queryFn: async () => {
-      const res = await fetch(`/revira/api/clients/${project?.clientId}`, { credentials: "include" });
+      const res = await fetch(`/api/clients/${project?.clientId}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch client");
       return res.json();
     },
@@ -390,19 +390,19 @@ export default function QuotationPage() {
   });
 
   const { data: branding } = useQuery<Branding>({
-    queryKey: ["/revira/api/branding"],
+    queryKey: ["/api/branding"],
     enabled: !!user,
   });
 
   const { data: existingQuotation } = useQuery<Quotation>({
-    queryKey: ["/revira/api/quotations", quotationId],
+    queryKey: ["/api/quotations", quotationId],
     queryFn: async () => {
       if (quotationId) {
-        const res = await fetch(`/revira/api/quotations/${quotationId}`, { credentials: "include" });
+        const res = await fetch(`/api/quotations/${quotationId}`, { credentials: "include" });
         if (!res.ok) throw new Error("Failed to fetch quotation");
         return res.json();
       }
-      const res = await fetch(`/revira/api/projects/${projectId}/quotation`, { credentials: "include" });
+      const res = await fetch(`/api/projects/${projectId}/quotation`, { credentials: "include" });
       if (!res.ok) {
         if (res.status === 404) return null;
         throw new Error("Failed to fetch quotation");
@@ -413,9 +413,9 @@ export default function QuotationPage() {
   });
 
   const { data: existingItems } = useQuery<QuotationItem[]>({
-    queryKey: ["/revira/api/quotations", existingQuotation?.id, "items"],
+    queryKey: ["/api/quotations", existingQuotation?.id, "items"],
     queryFn: async () => {
-      const res = await fetch(`/revira/api/quotations/${existingQuotation?.id}/items`, { credentials: "include" });
+      const res = await fetch(`/api/quotations/${existingQuotation?.id}/items`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch items");
       return res.json();
     },
@@ -423,9 +423,9 @@ export default function QuotationPage() {
   });
 
   const { data: quotationVersions } = useQuery<Quotation[]>({
-    queryKey: ["/revira/api/projects", projectId, "quotation-versions"],
+    queryKey: ["/api/projects", projectId, "quotation-versions"],
     queryFn: async () => {
-      const res = await fetch(`/revira/api/projects/${projectId}/quotation-versions`, { credentials: "include" });
+      const res = await fetch(`/api/projects/${projectId}/quotation-versions`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch versions");
       return res.json();
     },
@@ -506,7 +506,7 @@ export default function QuotationPage() {
 
   const createQuotationMutation = useMutation({
     mutationFn: async () => {
-      const quotationRes = await apiRequest("POST", "/revira/api/quotations", {
+      const quotationRes = await apiRequest("POST", "/api/quotations", {
         projectId: Number(projectId),
         ...quotationData,
         contentSections: JSON.stringify(contentSections),
@@ -515,7 +515,7 @@ export default function QuotationPage() {
       
       for (const item of lineItems) {
         if (item.description.trim()) {
-          await apiRequest("POST", `/revira/api/quotations/${quotation.id}/items`, {
+          await apiRequest("POST", `/api/quotations/${quotation.id}/items`, {
             serialNo: item.serialNo,
             description: item.description,
             unit: item.unit,
@@ -530,10 +530,10 @@ export default function QuotationPage() {
       return quotation;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/revira/api/quotations", quotationId] });
-      queryClient.invalidateQueries({ queryKey: ["/revira/api/projects", projectId, "quotation-versions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotations", quotationId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "quotation-versions"] });
       // Navigate to the new quotation to update the URL and refetch
-      setLocation(`/revira/projects/${projectId}/quotation/${data.id}`);
+      setLocation(`/projects/${projectId}/quotation/${data.id}`);
       toast({
         title: "Quotation saved",
         description: "The quotation has been created successfully.",
@@ -552,20 +552,20 @@ export default function QuotationPage() {
     mutationFn: async () => {
       if (!existingQuotation) return;
       
-      await apiRequest("PUT", `/revira/api/quotations/${existingQuotation.id}`, {
+      await apiRequest("PUT", `/api/quotations/${existingQuotation.id}`, {
         ...quotationData,
         contentSections: JSON.stringify(contentSections),
       });
       
       if (existingItems) {
         for (const item of existingItems) {
-          await apiRequest("DELETE", `/revira/api/quotation-items/${item.id}`);
+          await apiRequest("DELETE", `/api/quotation-items/${item.id}`);
         }
       }
       
       for (const item of lineItems) {
         if (item.description.trim()) {
-          await apiRequest("POST", `/revira/api/quotations/${existingQuotation.id}/items`, {
+          await apiRequest("POST", `/api/quotations/${existingQuotation.id}/items`, {
             serialNo: item.serialNo,
             description: item.description,
             unit: item.unit,
@@ -578,9 +578,9 @@ export default function QuotationPage() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/revira/api/projects", projectId, "quotation"] });
-      queryClient.invalidateQueries({ queryKey: ["/revira/api/quotations", existingQuotation?.id, "items"] });
-      queryClient.invalidateQueries({ queryKey: ["/revira/api/projects", projectId, "quotation-versions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "quotation"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotations", existingQuotation?.id, "items"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "quotation-versions"] });
       toast({
         title: "Quotation updated",
         description: "The quotation has been updated successfully.",
@@ -598,16 +598,16 @@ export default function QuotationPage() {
   const duplicateQuotationMutation = useMutation({
     mutationFn: async () => {
       if (!existingQuotation) throw new Error("No quotation to duplicate");
-      const res = await apiRequest("POST", `/revira/api/quotations/${existingQuotation.id}/duplicate`);
+      const res = await apiRequest("POST", `/api/quotations/${existingQuotation.id}/duplicate`);
       return res.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/revira/api/projects", projectId, "quotation-versions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "quotation-versions"] });
       toast({
         title: "Quotation duplicated",
         description: `Created new version: ${data.revision}`,
       });
-      setLocation(`/revira/projects/${projectId}/quotation/${data.id}`);
+      setLocation(`/projects/${projectId}/quotation/${data.id}`);
     },
     onError: (error: Error) => {
       toast({
@@ -1480,7 +1480,7 @@ export default function QuotationPage() {
       <LayoutShell user={user}>
         <div className="text-center py-16">
           <h2 className="text-xl font-semibold text-slate-700">Project not found</h2>
-          <Button onClick={() => setLocation("/revira/projects")} className="mt-4">
+          <Button onClick={() => setLocation("/projects")} className="mt-4">
             Back to Projects
           </Button>
         </div>
@@ -1497,7 +1497,7 @@ export default function QuotationPage() {
             <Button 
               variant="ghost" 
               size="icon"
-              onClick={() => setLocation("/revira/projects")}
+              onClick={() => setLocation("/projects")}
               data-testid="button-back"
             >
               <ArrowLeft className="h-5 w-5" />
@@ -1588,13 +1588,13 @@ export default function QuotationPage() {
                 onClick={async () => {
                   if (confirm(`Are you sure you want to delete this quotation (${existingQuotation.revision})?`)) {
                     try {
-                      await apiRequest("DELETE", `/revira/api/quotations/${existingQuotation.id}`);
-                      queryClient.invalidateQueries({ queryKey: ["/revira/api/projects", projectId, "quotation-versions"] });
+                      await apiRequest("DELETE", `/api/quotations/${existingQuotation.id}`);
+                      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "quotation-versions"] });
                       const remaining = quotationVersions.filter(q => q.id !== existingQuotation.id);
                       if (remaining.length > 0) {
-                        setLocation(`/revira/projects/${projectId}/quotation/${remaining[0].id}`);
+                        setLocation(`/projects/${projectId}/quotation/${remaining[0].id}`);
                       } else {
-                        setLocation(`/revira/projects/${projectId}/quotation`);
+                        setLocation(`/projects/${projectId}/quotation`);
                       }
                       toast({ title: "Quotation deleted", description: `${existingQuotation.revision} has been deleted.` });
                     } catch (error) {
@@ -2601,7 +2601,7 @@ export default function QuotationPage() {
                     variant={existingQuotation?.id === v.id ? "secondary" : "default"}
                     className={existingQuotation?.id === v.id ? "" : "bg-[#d92134] hover:bg-[#b91c2c]"}
                     onClick={() => {
-                      setLocation(`/revira/projects/${projectId}/quotation/${v.id}`);
+                      setLocation(`/projects/${projectId}/quotation/${v.id}`);
                       setVersionsDialogOpen(false);
                     }}
                     data-testid={`button-edit-version-${v.id}`}
@@ -2618,14 +2618,14 @@ export default function QuotationPage() {
                         e.stopPropagation();
                         if (confirm(`Are you sure you want to delete ${v.revision}?`)) {
                           try {
-                            await apiRequest("DELETE", `/revira/api/quotations/${v.id}`);
-                            queryClient.invalidateQueries({ queryKey: ["/revira/api/projects", projectId, "quotation-versions"] });
+                            await apiRequest("DELETE", `/api/quotations/${v.id}`);
+                            queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "quotation-versions"] });
                             if (existingQuotation?.id === v.id) {
                               const remaining = quotationVersions.filter(q => q.id !== v.id);
                               if (remaining.length > 0) {
-                                setLocation(`/revira/projects/${projectId}/quotation/${remaining[0].id}`);
+                                setLocation(`/projects/${projectId}/quotation/${remaining[0].id}`);
                               } else {
-                                setLocation(`/revira/projects/${projectId}/quotation`);
+                                setLocation(`/projects/${projectId}/quotation`);
                               }
                             }
                             toast({ title: "Version deleted", description: `${v.revision} has been deleted.` });
