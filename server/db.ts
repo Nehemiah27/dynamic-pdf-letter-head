@@ -11,5 +11,5 @@ import { Pool } from "pg";
 //   );
 // }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+export const pool = new Pool({ connectionString: "postgresql://appuser:secret@localhost:5432/revira" });
 export const db = drizzle(pool);

@@ -107,6 +107,7 @@ export function setupAuth(app: Express) {
         username: "admin@reviranexgen.com",
         password: hashedPassword,
         name: "Admin User",
+        role: "Administrator"
       });
       console.log("Admin user seeded");
     }
