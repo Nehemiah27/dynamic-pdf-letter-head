@@ -327,7 +327,7 @@ export default function QuotationPage() {
     subject: "Supply & erection of Steel Structures for PEB Shed",
     contactName: "Hareram R Sharma",
     contactMobile: "8390491843",
-    contactEmail: "Hareram.sharma@divinenexgen.com",
+    contactEmail: "Hareram.sharma@reviranexgen.com",
     buildingDescription: "PEB Shed",
     buildingArea: "",
     frameType: "RF/MF",
@@ -1028,7 +1028,8 @@ export default function QuotationPage() {
         pdf.setFontSize(fontSize);
         pdf.setTextColor(0, 0, 0);
         pdf.setFont('helvetica', 'normal');
-        const lines = pdf.splitTextToSize(text, contentWidth - indent);
+        //const lines = pdf.splitTextToSize(text, contentWidth - indent);
+        const lines = pdf.splitTextToSize(text, contentWidth);
         lines.forEach((line: string) => {
           checkNewPage(6);
           pdf.text(line, margin + indent, currentY);
@@ -1038,84 +1039,75 @@ export default function QuotationPage() {
       
       const addTable = (headers: string[], rows: string[][], colWidths: number[]) => {
         currentY += 3;
-        const rowHeight = 8;
+        const baseRowHeight = 8;
+        const padding = 2;
         const headerBg = '#fff5f5';
         const borderColor = '#eeb7b7';
-        
-        checkNewPage(rowHeight * (rows.length + 1) + 5);
-        
-        let x = margin;
+
+        // --- Render Header ---
+        checkNewPage(baseRowHeight + 5);
         pdf.setFillColor(headerBg);
-        pdf.rect(margin, currentY - 5, contentWidth, rowHeight, 'F');
+        pdf.rect(margin, currentY - 5, contentWidth, baseRowHeight, 'F');
         pdf.setDrawColor(borderColor);
         pdf.setLineWidth(0.2);
-        pdf.rect(margin, currentY - 5, contentWidth, rowHeight, 'S');
-        let cellX = margin;
-        colWidths.forEach((w) => {
-          pdf.line(cellX, currentY - 5, cellX, currentY - 5 + rowHeight);
-          cellX += w;
-        });
-        pdf.line(cellX, currentY - 5, cellX, currentY - 5 + rowHeight);
-        
+        pdf.rect(margin, currentY - 5, contentWidth, baseRowHeight, 'S');
+
+        let x = margin;
         pdf.setFontSize(9);
         pdf.setTextColor(0, 0, 0);
         pdf.setFont('helvetica', 'bold');
+        
         headers.forEach((header, i) => {
-          pdf.text(header, x + 2, currentY);
+          pdf.line(x, currentY - 5, x, currentY - 5 + baseRowHeight);
+          pdf.text(header, x + padding, currentY);
           x += colWidths[i];
         });
-        currentY += rowHeight;
-        
-        pdf.setTextColor(0, 0, 0);
+        pdf.line(x, currentY - 5, x, currentY - 5 + baseRowHeight);
+        currentY += baseRowHeight;
+
+        // --- Render Rows ---
         pdf.setFont('helvetica', 'normal');
         rows.forEach((row, rowIdx) => {
-          if (checkNewPage(rowHeight)) {
-            x = margin;
-            pdf.setFillColor(headerBg);
-            pdf.rect(margin, currentY - 5, contentWidth, rowHeight, 'F');
-            pdf.setDrawColor(borderColor);
-            pdf.rect(margin, currentY - 5, contentWidth, rowHeight, 'S');
-            cellX = margin;
-            colWidths.forEach((w) => {
-              pdf.line(cellX, currentY - 5, cellX, currentY - 5 + rowHeight);
-              cellX += w;
-            });
-            pdf.line(cellX, currentY - 5, cellX, currentY - 5 + rowHeight);
-            pdf.setTextColor(0, 0, 0);
-            pdf.setFont('helvetica', 'bold');
-            headers.forEach((header, i) => {
-              pdf.text(header, x + 2, currentY);
-              x += colWidths[i];
-            });
-            currentY += rowHeight;
-            pdf.setTextColor(0, 0, 0);
-            pdf.setFont('helvetica', 'normal');
+          // 1. Calculate how many lines each cell needs
+          const preparedCells = row.map((cell, i) => {
+            return pdf.splitTextToSize(cell, colWidths[i] - (padding * 2));
+          });
+
+          // 2. Determine row height based on the max number of lines
+          const maxLines = Math.max(...preparedCells.map(lines => lines.length));
+          const dynamicRowHeight = Math.max(baseRowHeight, (maxLines * 4) + padding);
+
+          // 3. Page break check
+          if (checkNewPage(dynamicRowHeight)) {
+            // Re-draw header on new page if you wish, or just continue
           }
-          
-          x = margin;
+
+          // 4. Draw Row Background and Border
           if (rowIdx % 2 === 0) {
             pdf.setFillColor(245, 245, 245);
-            pdf.rect(margin, currentY - 5, contentWidth, rowHeight, 'F');
+            pdf.rect(margin, currentY - 5, contentWidth, dynamicRowHeight, 'F');
           }
           pdf.setDrawColor(borderColor);
-          pdf.rect(margin, currentY - 5, contentWidth, rowHeight, 'S');
-          cellX = margin;
-          colWidths.forEach((w) => {
-            pdf.line(cellX, currentY - 5, cellX, currentY - 5 + rowHeight);
-            cellX += w;
+          pdf.rect(margin, currentY - 5, contentWidth, dynamicRowHeight, 'S');
+
+          // 5. Draw Cell Content and Vertical Lines
+          let cellX = margin;
+          preparedCells.forEach((lines, i) => {
+            pdf.line(cellX, currentY - 5, cellX, currentY - 5 + dynamicRowHeight);
+            
+            // Render every line of the cell text
+            lines.forEach((line: string, lineIdx: number) => {
+              pdf.text(line, cellX + padding, (currentY - 1) + (lineIdx * 4));
+            });
+            
+            cellX += colWidths[i];
           });
-          pdf.line(cellX, currentY - 5, cellX, currentY - 5 + rowHeight);
-          
-          row.forEach((cell, i) => {
-            const cellText = pdf.splitTextToSize(cell, colWidths[i] - 4)[0] || '';
-            pdf.text(cellText, x + 2, currentY);
-            x += colWidths[i];
-          });
-          currentY += rowHeight;
+          pdf.line(cellX, currentY - 5, cellX, currentY - 5 + dynamicRowHeight);
+
+          currentY += dynamicRowHeight;
         });
         currentY += 1.5;
       };
-      
       addHeaderFooterStamp(1);
       
       pdf.setFontSize(10);
@@ -2238,6 +2230,9 @@ export default function QuotationPage() {
                             >
                               <Edit3 className="h-3 w-3 text-slate-400" />
                             </Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => removePaymentTerm(index)}>
+                              <Trash2 className="h-4 w-4 text-red-600" />
+                            </Button>
                           </>
                         )}
                       </li>
@@ -2507,6 +2502,9 @@ export default function QuotationPage() {
                         >
                           <Edit3 className="h-3 w-3 text-slate-400" />
                         </Button>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => removeNote(index)}>
+                              <Trash2 className="h-4 w-4 text-red-600" />
+                            </Button>
                       </>
                     )}
                   </li>
