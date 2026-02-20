@@ -7,6 +7,12 @@ import {
   quotationItems,
   invoices,
   invoiceItems,
+  gatePasses,
+  gatePassItems,
+  deliveryChallans,
+  deliveryChallanItems,
+  projectLedgerBudgets,
+  projectLedgerEntries,
   branding,
   userClientAssignments,
   type User,
@@ -23,12 +29,24 @@ import {
   type InsertInvoice,
   type InvoiceItem,
   type InsertInvoiceItem,
+  type GatePass,
+  type InsertGatePass,
+  type GatePassItem,
+  type InsertGatePassItem,
+  type DeliveryChallan,
+  type InsertDeliveryChallan,
+  type DeliveryChallanItem,
+  type InsertDeliveryChallanItem,
+  type ProjectLedgerBudget,
+  type InsertProjectLedgerBudget,
+  type ProjectLedgerEntry,
+  type InsertProjectLedgerEntry,
   type Branding,
   type InsertBranding,
   type UserClientAssignment,
   type InsertUserClientAssignment,
 } from "@shared/schema";
-import { eq, inArray, desc } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -110,6 +128,74 @@ export interface IStorage {
   ): Promise<InvoiceItem | undefined>;
   deleteInvoiceItem(id: number): Promise<boolean>;
   deleteInvoiceItemsByInvoiceId(invoiceId: number): Promise<boolean>;
+
+  getGatePasses(): Promise<GatePass[]>;
+  getGatePass(id: number): Promise<GatePass | undefined>;
+  getGatePassByProjectId(projectId: number): Promise<GatePass | undefined>;
+  getGatePassVersions(projectId: number): Promise<GatePass[]>;
+  createGatePass(gatePass: InsertGatePass): Promise<GatePass>;
+  updateGatePass(
+    id: number,
+    updates: Partial<InsertGatePass>,
+  ): Promise<GatePass | undefined>;
+  deleteGatePass(id: number): Promise<boolean>;
+
+  getGatePassItems(gatePassId: number): Promise<GatePassItem[]>;
+  createGatePassItem(item: InsertGatePassItem): Promise<GatePassItem>;
+  updateGatePassItem(
+    id: number,
+    updates: Partial<InsertGatePassItem>,
+  ): Promise<GatePassItem | undefined>;
+  deleteGatePassItem(id: number): Promise<boolean>;
+  deleteGatePassItemsByGatePassId(gatePassId: number): Promise<boolean>;
+
+  getDeliveryChallans(): Promise<DeliveryChallan[]>;
+  getDeliveryChallan(id: number): Promise<DeliveryChallan | undefined>;
+  getDeliveryChallanByProjectId(
+    projectId: number,
+  ): Promise<DeliveryChallan | undefined>;
+  getDeliveryChallanVersions(projectId: number): Promise<DeliveryChallan[]>;
+  createDeliveryChallan(
+    deliveryChallan: InsertDeliveryChallan,
+  ): Promise<DeliveryChallan>;
+  updateDeliveryChallan(
+    id: number,
+    updates: Partial<InsertDeliveryChallan>,
+  ): Promise<DeliveryChallan | undefined>;
+  deleteDeliveryChallan(id: number): Promise<boolean>;
+
+  getDeliveryChallanItems(
+    deliveryChallanId: number,
+  ): Promise<DeliveryChallanItem[]>;
+  createDeliveryChallanItem(
+    item: InsertDeliveryChallanItem,
+  ): Promise<DeliveryChallanItem>;
+  updateDeliveryChallanItem(
+    id: number,
+    updates: Partial<InsertDeliveryChallanItem>,
+  ): Promise<DeliveryChallanItem | undefined>;
+  deleteDeliveryChallanItem(id: number): Promise<boolean>;
+  deleteDeliveryChallanItemsByDeliveryChallanId(
+    deliveryChallanId: number,
+  ): Promise<boolean>;
+
+  getProjectLedgerBudget(
+    projectId: number,
+  ): Promise<ProjectLedgerBudget | undefined>;
+  upsertProjectLedgerBudget(
+    projectId: number,
+    projectValue: string,
+  ): Promise<ProjectLedgerBudget>;
+  getProjectLedgerEntries(projectId: number): Promise<ProjectLedgerEntry[]>;
+  createProjectLedgerEntry(
+    entry: InsertProjectLedgerEntry,
+  ): Promise<ProjectLedgerEntry>;
+  updateProjectLedgerEntry(
+    id: number,
+    updates: Partial<InsertProjectLedgerEntry>,
+  ): Promise<ProjectLedgerEntry | undefined>;
+  deleteProjectLedgerEntry(id: number): Promise<boolean>;
+  deleteProjectLedgerEntriesByProjectId(projectId: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -321,6 +407,46 @@ export class DatabaseStorage implements IStorage {
     // Delete all invoices for this project
     await db.delete(invoices).where(eq(invoices.projectId, id));
 
+    // Get all gate passes for this project
+    const projectGatePasses = await db
+      .select()
+      .from(gatePasses)
+      .where(eq(gatePasses.projectId, id));
+
+    // Delete all gate pass items for each gate pass
+    for (const gatePass of projectGatePasses) {
+      await db
+        .delete(gatePassItems)
+        .where(eq(gatePassItems.gatePassId, gatePass.id));
+    }
+
+    // Delete all gate passes for this project
+    await db.delete(gatePasses).where(eq(gatePasses.projectId, id));
+
+    // Get all delivery challans for this project
+    const projectDeliveryChallans = await db
+      .select()
+      .from(deliveryChallans)
+      .where(eq(deliveryChallans.projectId, id));
+
+    // Delete all delivery challan items for each delivery challan
+    for (const deliveryChallan of projectDeliveryChallans) {
+      await db
+        .delete(deliveryChallanItems)
+        .where(eq(deliveryChallanItems.deliveryChallanId, deliveryChallan.id));
+    }
+
+    // Delete all delivery challans for this project
+    await db.delete(deliveryChallans).where(eq(deliveryChallans.projectId, id));
+
+    // Delete ledger entries and budget for this project
+    await db
+      .delete(projectLedgerEntries)
+      .where(eq(projectLedgerEntries.projectId, id));
+    await db
+      .delete(projectLedgerBudgets)
+      .where(eq(projectLedgerBudgets.projectId, id));
+
     // Now delete the project
     const result = await db
       .delete(projects)
@@ -347,7 +473,8 @@ export class DatabaseStorage implements IStorage {
     const [quotation] = await db
       .select()
       .from(quotations)
-      .where(eq(quotations.projectId, projectId));
+      .where(eq(quotations.projectId, projectId))
+      .orderBy(desc(quotations.version));
     return quotation;
   }
 
@@ -551,6 +678,301 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .delete(invoiceItems)
       .where(eq(invoiceItems.invoiceId, invoiceId))
+      .returning();
+    return result.length > 0;
+  }
+
+  async getGatePasses(): Promise<GatePass[]> {
+    return await db.select().from(gatePasses);
+  }
+
+  async getGatePass(id: number): Promise<GatePass | undefined> {
+    const [gatePass] = await db
+      .select()
+      .from(gatePasses)
+      .where(eq(gatePasses.id, id));
+    return gatePass;
+  }
+
+  async getGatePassByProjectId(
+    projectId: number,
+  ): Promise<GatePass | undefined> {
+    const [gatePass] = await db
+      .select()
+      .from(gatePasses)
+      .where(eq(gatePasses.projectId, projectId));
+    return gatePass;
+  }
+
+  async getGatePassVersions(projectId: number): Promise<GatePass[]> {
+    return await db
+      .select()
+      .from(gatePasses)
+      .where(eq(gatePasses.projectId, projectId));
+  }
+
+  async createGatePass(insertGatePass: InsertGatePass): Promise<GatePass> {
+    const [gatePass] = await db
+      .insert(gatePasses)
+      .values(insertGatePass)
+      .returning();
+    return gatePass;
+  }
+
+  async updateGatePass(
+    id: number,
+    updates: Partial<InsertGatePass>,
+  ): Promise<GatePass | undefined> {
+    const [gatePass] = await db
+      .update(gatePasses)
+      .set(updates)
+      .where(eq(gatePasses.id, id))
+      .returning();
+    return gatePass;
+  }
+
+  async deleteGatePass(id: number): Promise<boolean> {
+    await db.delete(gatePassItems).where(eq(gatePassItems.gatePassId, id));
+    const result = await db
+      .delete(gatePasses)
+      .where(eq(gatePasses.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async getGatePassItems(gatePassId: number): Promise<GatePassItem[]> {
+    return await db
+      .select()
+      .from(gatePassItems)
+      .where(eq(gatePassItems.gatePassId, gatePassId));
+  }
+
+  async createGatePassItem(item: InsertGatePassItem): Promise<GatePassItem> {
+    const [gatePassItem] = await db
+      .insert(gatePassItems)
+      .values(item)
+      .returning();
+    return gatePassItem;
+  }
+
+  async updateGatePassItem(
+    id: number,
+    updates: Partial<InsertGatePassItem>,
+  ): Promise<GatePassItem | undefined> {
+    const [item] = await db
+      .update(gatePassItems)
+      .set(updates)
+      .where(eq(gatePassItems.id, id))
+      .returning();
+    return item;
+  }
+
+  async deleteGatePassItem(id: number): Promise<boolean> {
+    const result = await db
+      .delete(gatePassItems)
+      .where(eq(gatePassItems.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async deleteGatePassItemsByGatePassId(gatePassId: number): Promise<boolean> {
+    const result = await db
+      .delete(gatePassItems)
+      .where(eq(gatePassItems.gatePassId, gatePassId))
+      .returning();
+    return result.length > 0;
+  }
+
+  async getDeliveryChallans(): Promise<DeliveryChallan[]> {
+    return await db.select().from(deliveryChallans);
+  }
+
+  async getDeliveryChallan(id: number): Promise<DeliveryChallan | undefined> {
+    const [deliveryChallan] = await db
+      .select()
+      .from(deliveryChallans)
+      .where(eq(deliveryChallans.id, id));
+    return deliveryChallan;
+  }
+
+  async getDeliveryChallanByProjectId(
+    projectId: number,
+  ): Promise<DeliveryChallan | undefined> {
+    const [deliveryChallan] = await db
+      .select()
+      .from(deliveryChallans)
+      .where(eq(deliveryChallans.projectId, projectId));
+    return deliveryChallan;
+  }
+
+  async getDeliveryChallanVersions(
+    projectId: number,
+  ): Promise<DeliveryChallan[]> {
+    return await db
+      .select()
+      .from(deliveryChallans)
+      .where(eq(deliveryChallans.projectId, projectId));
+  }
+
+  async createDeliveryChallan(
+    insertDeliveryChallan: InsertDeliveryChallan,
+  ): Promise<DeliveryChallan> {
+    const [deliveryChallan] = await db
+      .insert(deliveryChallans)
+      .values(insertDeliveryChallan)
+      .returning();
+    return deliveryChallan;
+  }
+
+  async updateDeliveryChallan(
+    id: number,
+    updates: Partial<InsertDeliveryChallan>,
+  ): Promise<DeliveryChallan | undefined> {
+    const [deliveryChallan] = await db
+      .update(deliveryChallans)
+      .set(updates)
+      .where(eq(deliveryChallans.id, id))
+      .returning();
+    return deliveryChallan;
+  }
+
+  async deleteDeliveryChallan(id: number): Promise<boolean> {
+    await db
+      .delete(deliveryChallanItems)
+      .where(eq(deliveryChallanItems.deliveryChallanId, id));
+    const result = await db
+      .delete(deliveryChallans)
+      .where(eq(deliveryChallans.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async getDeliveryChallanItems(
+    deliveryChallanId: number,
+  ): Promise<DeliveryChallanItem[]> {
+    return await db
+      .select()
+      .from(deliveryChallanItems)
+      .where(eq(deliveryChallanItems.deliveryChallanId, deliveryChallanId));
+  }
+
+  async createDeliveryChallanItem(
+    item: InsertDeliveryChallanItem,
+  ): Promise<DeliveryChallanItem> {
+    const [deliveryChallanItem] = await db
+      .insert(deliveryChallanItems)
+      .values(item)
+      .returning();
+    return deliveryChallanItem;
+  }
+
+  async updateDeliveryChallanItem(
+    id: number,
+    updates: Partial<InsertDeliveryChallanItem>,
+  ): Promise<DeliveryChallanItem | undefined> {
+    const [item] = await db
+      .update(deliveryChallanItems)
+      .set(updates)
+      .where(eq(deliveryChallanItems.id, id))
+      .returning();
+    return item;
+  }
+
+  async deleteDeliveryChallanItem(id: number): Promise<boolean> {
+    const result = await db
+      .delete(deliveryChallanItems)
+      .where(eq(deliveryChallanItems.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async deleteDeliveryChallanItemsByDeliveryChallanId(
+    deliveryChallanId: number,
+  ): Promise<boolean> {
+    const result = await db
+      .delete(deliveryChallanItems)
+      .where(eq(deliveryChallanItems.deliveryChallanId, deliveryChallanId))
+      .returning();
+    return result.length > 0;
+  }
+
+  async getProjectLedgerBudget(
+    projectId: number,
+  ): Promise<ProjectLedgerBudget | undefined> {
+    const [budget] = await db
+      .select()
+      .from(projectLedgerBudgets)
+      .where(eq(projectLedgerBudgets.projectId, projectId));
+    return budget;
+  }
+
+  async upsertProjectLedgerBudget(
+    projectId: number,
+    projectValue: string,
+  ): Promise<ProjectLedgerBudget> {
+    const existing = await this.getProjectLedgerBudget(projectId);
+    if (existing) {
+      const [updated] = await db
+        .update(projectLedgerBudgets)
+        .set({ projectValue, updatedAt: new Date() })
+        .where(eq(projectLedgerBudgets.id, existing.id))
+        .returning();
+      return updated;
+    }
+
+    const [created] = await db
+      .insert(projectLedgerBudgets)
+      .values({ projectId, projectValue })
+      .returning();
+    return created;
+  }
+
+  async getProjectLedgerEntries(
+    projectId: number,
+  ): Promise<ProjectLedgerEntry[]> {
+    return await db
+      .select()
+      .from(projectLedgerEntries)
+      .where(eq(projectLedgerEntries.projectId, projectId))
+      .orderBy(desc(projectLedgerEntries.id));
+  }
+
+  async createProjectLedgerEntry(
+    entry: InsertProjectLedgerEntry,
+  ): Promise<ProjectLedgerEntry> {
+    const [created] = await db
+      .insert(projectLedgerEntries)
+      .values(entry)
+      .returning();
+    return created;
+  }
+
+  async updateProjectLedgerEntry(
+    id: number,
+    updates: Partial<InsertProjectLedgerEntry>,
+  ): Promise<ProjectLedgerEntry | undefined> {
+    const [updated] = await db
+      .update(projectLedgerEntries)
+      .set(updates)
+      .where(eq(projectLedgerEntries.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteProjectLedgerEntry(id: number): Promise<boolean> {
+    const result = await db
+      .delete(projectLedgerEntries)
+      .where(eq(projectLedgerEntries.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async deleteProjectLedgerEntriesByProjectId(
+    projectId: number,
+  ): Promise<boolean> {
+    const result = await db
+      .delete(projectLedgerEntries)
+      .where(eq(projectLedgerEntries.projectId, projectId))
       .returning();
     return result.length > 0;
   }

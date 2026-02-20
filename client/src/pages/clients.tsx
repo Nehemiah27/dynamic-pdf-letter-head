@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -33,6 +33,7 @@ import {
   Mail,
   MapPin,
   Building2,
+  Search,
 } from "lucide-react";
 import { LayoutShell } from "@/components/layout-shell";
 import { useUser } from "@/hooks/use-auth";
@@ -53,9 +54,18 @@ const clientFormSchema = z.object({
 
 type ClientFormData = z.infer<typeof clientFormSchema>;
 
+const withLegacyClientDefaults = (data: ClientFormData): ClientFormData => ({
+  ...data,
+  gstNo: data.gstNo?.trim() || "NA",
+  contactPerson: data.contactPerson?.trim() || "NA",
+  mobileNumber: data.mobileNumber?.trim() || "0000000000",
+  emailAddress: data.emailAddress?.trim() || "na@example.com",
+});
+
 export default function ClientsPage() {
   const [open, setOpen] = useState(false);
   const [editClient, setEditClient] = useState<Client | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const { data: user } = useUser();
 
@@ -77,7 +87,11 @@ export default function ClientsPage() {
 
   const createMutation = useMutation({
     mutationFn: async (data: ClientFormData) => {
-      const res = await apiRequest("POST", "/revira/api/clients", data);
+      const res = await apiRequest(
+        "POST",
+        "/revira/api/clients",
+        withLegacyClientDefaults(data),
+      );
       return res.json();
     },
     onSuccess: () => {
@@ -171,170 +185,203 @@ export default function ClientsPage() {
     }
   };
 
+  const filteredClients = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    const sorted = [...(clients ?? [])].sort((a, b) => b.id - a.id);
+    if (!term) return sorted;
+
+    return sorted.filter((client) =>
+      [
+        client.name,
+        client.location,
+        client.gstNo,
+        client.contactPerson,
+        client.mobileNumber,
+        client.emailAddress,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(term),
+    );
+  }, [clients, searchTerm]);
+
   return (
     <LayoutShell user={user}>
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-gradient-to-br from-primary to-primary/80 text-white shadow-lg shadow-primary/25">
-            <Users className="h-6 w-6" />
+      <div className="flex flex-col gap-4 mb-8">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-gradient-to-br from-primary to-primary/80 text-white shadow-lg shadow-primary/25">
+              <Users className="h-6 w-6" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900">Clients</h1>
+              <p className="text-sm text-slate-500">
+                Manage your client partners
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Clients</h1>
-            <p className="text-sm text-slate-500">
-              Manage your client partners
-            </p>
-          </div>
+
+          <Dialog open={open} onOpenChange={handleCloseDialog}>
+            <DialogTrigger asChild>
+              <Button
+                data-testid="button-add-client"
+                className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/25 transition-all duration-300"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Client
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>
+                  {editClient ? "Edit Client" : "Create New Client"}
+                </DialogTitle>
+                <DialogDescription>
+                  {editClient
+                    ? "Update client details below."
+                    : "Add a new client partner to your system."}
+                </DialogDescription>
+              </DialogHeader>
+              <Form {...form}>
+                <form
+                  onSubmit={form.handleSubmit(onSubmit)}
+                  className="space-y-4"
+                >
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Client Name</FormLabel>
+                        <FormControl>
+                          <Input
+                            data-testid="input-client-name"
+                            placeholder="Enter client name"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="location"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Location</FormLabel>
+                        <FormControl>
+                          <Input
+                            data-testid="input-location"
+                            placeholder="Enter location"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="gstNo"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>GST No.</FormLabel>
+                        <FormControl>
+                          <Input
+                            data-testid="input-gst-no"
+                            placeholder="Enter GST number"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="contactPerson"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Contact Person</FormLabel>
+                        <FormControl>
+                          <Input
+                            data-testid="input-contact-person"
+                            placeholder="Enter contact person name"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="mobileNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Mobile Number</FormLabel>
+                        <FormControl>
+                          <Input
+                            data-testid="input-mobile-number"
+                            placeholder="Enter mobile number"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="emailAddress"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email Address</FormLabel>
+                        <FormControl>
+                          <Input
+                            data-testid="input-email-address"
+                            type="email"
+                            placeholder="Enter email address"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-primary to-primary/90"
+                    disabled={
+                      createMutation.isPending || updateMutation.isPending
+                    }
+                    data-testid="button-submit-client"
+                  >
+                    {createMutation.isPending || updateMutation.isPending
+                      ? editClient
+                        ? "Updating..."
+                        : "Creating..."
+                      : editClient
+                        ? "Update Client"
+                        : "Create Client"}
+                  </Button>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
         </div>
 
-        <Dialog open={open} onOpenChange={handleCloseDialog}>
-          <DialogTrigger asChild>
-            <Button
-              data-testid="button-add-client"
-              className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/25 transition-all duration-300"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Client
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>
-                {editClient ? "Edit Client" : "Create New Client"}
-              </DialogTitle>
-              <DialogDescription>
-                {editClient
-                  ? "Update client details below."
-                  : "Add a new client partner to your system."}
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-4"
-              >
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Client Name</FormLabel>
-                      <FormControl>
-                        <Input
-                          data-testid="input-client-name"
-                          placeholder="Enter client name"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Location</FormLabel>
-                      <FormControl>
-                        <Input
-                          data-testid="input-location"
-                          placeholder="Enter location"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="gstNo"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>GST No.</FormLabel>
-                      <FormControl>
-                        <Input
-                          data-testid="input-gst-no"
-                          placeholder="Enter GST number"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="contactPerson"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contact Person</FormLabel>
-                      <FormControl>
-                        <Input
-                          data-testid="input-contact-person"
-                          placeholder="Enter contact person name"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="mobileNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Mobile Number</FormLabel>
-                      <FormControl>
-                        <Input
-                          data-testid="input-mobile-number"
-                          placeholder="Enter mobile number"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="emailAddress"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email Address</FormLabel>
-                      <FormControl>
-                        <Input
-                          data-testid="input-email-address"
-                          type="email"
-                          placeholder="Enter email address"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button
-                  type="submit"
-                  className="w-full bg-gradient-to-r from-primary to-primary/90"
-                  disabled={
-                    createMutation.isPending || updateMutation.isPending
-                  }
-                  data-testid="button-submit-client"
-                >
-                  {createMutation.isPending || updateMutation.isPending
-                    ? editClient
-                      ? "Updating..."
-                      : "Creating..."
-                    : editClient
-                      ? "Update Client"
-                      : "Create Client"}
-                </Button>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+        <div className="relative max-w-md">
+          <Search className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Input
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search by name, GST, location, contact..."
+            className="pl-9"
+            data-testid="input-search-clients"
+          />
+        </div>
       </div>
 
       <Card className="border-0 shadow-lg overflow-hidden">
@@ -404,13 +451,13 @@ export default function ClientsPage() {
                 </div>
               ))}
             </div>
-          ) : clients && clients.length > 0 ? (
+          ) : filteredClients.length > 0 ? (
             <div className="divide-y divide-slate-100">
-              {clients.map((client) => (
+              {filteredClients.map((client) => (
                 <div
                   key={client.id}
                   data-testid={`row-client-${client.id}`}
-                  className="grid grid-cols-12 gap-4 px-6 py-5 items-center hover:bg-slate-50/50 transition-colors group"
+                  className="hidden md:grid grid-cols-12 gap-4 px-6 py-5 items-center hover:bg-slate-50/50 transition-colors group"
                 >
                   {/* Client Name */}
                   <div className="col-span-2 flex items-center gap-3">
@@ -505,6 +552,61 @@ export default function ClientsPage() {
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
+                </div>
+              ))}
+
+              {filteredClients.map((client) => (
+                <div
+                  key={`mobile-${client.id}`}
+                  className="md:hidden px-4 py-4 space-y-2 hover:bg-slate-50/50"
+                  data-testid={`card-client-${client.id}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-slate-900 uppercase text-sm">
+                        {client.name}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {client.location}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-md text-slate-400 hover:text-amber-600 hover:bg-amber-50"
+                        onClick={() => handleEdit(client)}
+                        data-testid={`button-edit-client-mobile-${client.id}`}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50"
+                        onClick={() => deleteMutation.mutate(client.id)}
+                        disabled={deleteMutation.isPending}
+                        data-testid={`button-delete-client-mobile-${client.id}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-600">
+                    <span className="font-semibold">GST:</span> {client.gstNo}
+                  </p>
+                  <p className="text-xs text-slate-600">
+                    <span className="font-semibold">Contact:</span>{" "}
+                    {client.contactPerson}
+                  </p>
+                  <p className="text-xs text-slate-600">
+                    <span className="font-semibold">Mobile:</span>{" "}
+                    {client.mobileNumber}
+                  </p>
+                  <p className="text-xs text-slate-600 break-all">
+                    <span className="font-semibold">Email:</span>{" "}
+                    {client.emailAddress}
+                  </p>
                 </div>
               ))}
             </div>

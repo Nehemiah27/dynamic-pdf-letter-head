@@ -22,7 +22,8 @@ import {
   Check,
   X,
   Eye,
-  MapPin
+  MapPin,
+  GripVertical
 } from "lucide-react";
 import { LayoutShell } from "@/components/layout-shell";
 import { useUser } from "@/hooks/use-auth";
@@ -75,6 +76,26 @@ interface CommercialTermRow {
 interface BankDetailRow {
   particular: string;
   value: string;
+}
+
+type AccordionBlockType =
+  | "scopeBrief"
+  | "scopeBasic"
+  | "scopeAdditions"
+  | "steelWork"
+  | "designLoads"
+  | "applicableCodes"
+  | "materialSpecs"
+  | "drawingsDelivery"
+  | "erectionScopeClient"
+  | "erectionScopeCompany"
+  | "commercialPrice"
+  | "commercialTerms";
+
+interface AccordionBlockInstance {
+  id: string;
+  type: AccordionBlockType;
+  heading: string;
 }
 
 interface ScopeTableProps {
@@ -159,6 +180,10 @@ const ScopeTable = memo(function ScopeTable({
 });
 
 interface QuotationContentSections {
+  proposalTitle?: string;
+  toLabel?: string;
+  msLabel?: string;
+  accordionBlocks?: AccordionBlockInstance[];
   introSections: ContentSection[];
   paymentTerms: string[];
   notes: string[];
@@ -180,6 +205,7 @@ interface QuotationContentSections {
 }
 
 const defaultSupplyFabricationContent: QuotationContentSections = {
+  proposalTitle: 'Techno-Commercial Offer',
   introSections: [
     { id: 'intro1', type: 'paragraph', content: 'We are pleased to submit our proposal for the supply & erection of steel Structure against your subject enquiry.' },
     { id: 'intro2', type: 'paragraph', content: 'Our area of expertise is in complete design, manufacture, installation & commissioning of Heavy Structural Fabrication & Pre-Engineered Building.' },
@@ -196,9 +222,9 @@ const defaultSupplyFabricationContent: QuotationContentSections = {
     'Billing as per BOQ.',
     'No third-party inspection or any inspection charges bear by the Revira Nexgen.',
     'NDT test will be performed at shop only and excluding all machines, testing and consumables.',
-    'Closed workshop area to be provided for work by M/s Apex with fully equipped light and ventilations.',
+    'Closed workshop area to be provided for work by M/s company with fully equipped light and ventilations.',
     'All Machines, Hydra, EOT cranes, raw materials, consumables, bed material. Skids for fabrication.',
-    'Detailing to be provided by M/s Apex.',
+    'Detailing to be provided by your company',
     'All shop drawing, BOQ, LOT SUMMARY to be provided by M/s company.',
   ],
   closingParagraphs: [
@@ -313,6 +339,62 @@ const defaultSupplyFabricationContent: QuotationContentSections = {
   ],
 };
 
+const SUPPLY_ACCORDION_BLOCK_TYPES: AccordionBlockType[] = [
+  "scopeBrief",
+  "scopeBasic",
+  "scopeAdditions",
+  "steelWork",
+  "designLoads",
+  "applicableCodes",
+  "materialSpecs",
+  "drawingsDelivery",
+  "erectionScopeClient",
+  "erectionScopeCompany",
+  "commercialPrice",
+  "commercialTerms",
+];
+
+const NON_SUPPLY_ACCORDION_BLOCK_TYPES: AccordionBlockType[] = ["commercialPrice"];
+
+const BLOCK_LABELS: Record<AccordionBlockType, string> = {
+  scopeBrief: "SCOPE OF SUPPLY - BRIEF DETAILS",
+  scopeBasic: "SCOPE OF SUPPLY - BASIC BUILDING DESCRIPTION",
+  scopeAdditions: "STANDARD BUILDING ADDITIONS (CANOPY / FASCIA / LINER / PARTITIONS)",
+  steelWork: "STEEL WORK FINISH",
+  designLoads: "DESIGN LOADS",
+  applicableCodes: "APPLICABLE CODES for Design",
+  materialSpecs: "MATERIAL SPECIFICATIONS",
+  drawingsDelivery: "DRAWINGS & DELIVERY",
+  erectionScopeClient: "ERECTION SCOPES - SCOPE OF CLIENT",
+  erectionScopeCompany: "ERECTION SCOPES - SCOPE OF COMPANY",
+  commercialPrice: "COMMERCIAL PRICE & PAYMENT TERMS",
+  commercialTerms: "COMMERCIAL TERMS & CONDITIONS",
+};
+
+const BLOCK_INDEX_TITLES: Record<AccordionBlockType, string> = {
+  scopeBrief: "Scope of Supply - Brief Details",
+  scopeBasic: "Scope of Supply - Basic Building Description",
+  scopeAdditions: "Standard Building Additions",
+  steelWork: "Steel Work Finish",
+  designLoads: "Design Loads",
+  applicableCodes: "Applicable Codes",
+  materialSpecs: "Material Specifications",
+  drawingsDelivery: "Drawings & Delivery",
+  erectionScopeClient: "Erection Scopes - Scope of Client",
+  erectionScopeCompany: "Erection Scopes - Scope of Company",
+  commercialPrice: "Commercial Price & Payment Terms",
+  commercialTerms: "Commercial Terms & Conditions",
+};
+
+const getDefaultAccordionBlocks = (isSupply: boolean): AccordionBlockInstance[] => {
+  const types = isSupply ? SUPPLY_ACCORDION_BLOCK_TYPES : NON_SUPPLY_ACCORDION_BLOCK_TYPES;
+  return types.map((type, index) => ({
+    id: `${type}-${index + 1}`,
+    type,
+    heading: BLOCK_LABELS[type],
+  }));
+};
+
 export default function QuotationPage() {
   const { projectId, quotationId } = useParams<{ projectId: string; quotationId?: string }>();
   const [, setLocation] = useLocation();
@@ -338,6 +420,8 @@ export default function QuotationPage() {
     paymentTerms: "",
     notes: "",
     proposalTitle: "Techno-Commercial Offer",
+    toLabel: "To",
+    msLabel: "M/s",
   });
 
   const [lineItems, setLineItems] = useState<LineItem[]>([
@@ -356,18 +440,9 @@ export default function QuotationPage() {
   const [editingBankDetail, setEditingBankDetail] = useState<number | null>(null);
   const [versionsDialogOpen, setVersionsDialogOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    scopeBrief: true,
-    scopeBasic: true,
-    scopeAdditions: true,
-    steelWork: true,
-    designLoads: true,
-    applicableCodes: true,
-    materialSpecs: true,
-    drawingsDelivery: true,
-    erectionScopeClient: true,
-    erectionScopeCompany: true,
-  });
+  const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null);
+  const [accordionBlocks, setAccordionBlocks] = useState<AccordionBlockInstance[]>([]);
+  const [expandedBlockIds, setExpandedBlockIds] = useState<Record<string, boolean>>({});
 
   const { data: project, isLoading: projectLoading } = useQuery<Project>({
     queryKey: ["/revira/api/projects", projectId],
@@ -395,7 +470,7 @@ export default function QuotationPage() {
   });
 
   const { data: existingQuotation } = useQuery<Quotation>({
-    queryKey: ["/revira/api/quotations", quotationId],
+    queryKey: ["/revira/api/projects", projectId, "quotation", quotationId || "latest"],
     queryFn: async () => {
       if (quotationId) {
         const res = await fetch(`/revira/api/quotations/${quotationId}`, { credentials: "include" });
@@ -432,6 +507,35 @@ export default function QuotationPage() {
     enabled: !!projectId,
   });
 
+  const getAllowedBlockTypes = useCallback((): AccordionBlockType[] => {
+    return project?.quotationType === "Supply and Fabrication"
+      ? SUPPLY_ACCORDION_BLOCK_TYPES
+      : NON_SUPPLY_ACCORDION_BLOCK_TYPES;
+  }, [project?.quotationType]);
+
+  const normalizeAccordionBlocks = useCallback((blocks: unknown): AccordionBlockInstance[] => {
+    const allowed = new Set(getAllowedBlockTypes());
+    if (!Array.isArray(blocks)) {
+      return getDefaultAccordionBlocks(project?.quotationType === "Supply and Fabrication");
+    }
+    const normalized = blocks
+      .filter((b): b is { id: string; type: AccordionBlockType; heading?: string } => Boolean(
+        b &&
+        typeof b === "object" &&
+        "id" in b &&
+        "type" in b &&
+        typeof (b as AccordionBlockInstance).id === "string" &&
+        typeof (b as AccordionBlockInstance).type === "string"
+      ))
+      .filter((b) => allowed.has(b.type));
+
+    return normalized.map((b) => ({
+      id: b.id,
+      type: b.type,
+      heading: typeof b.heading === "string" && b.heading.trim().length > 0 ? b.heading : BLOCK_LABELS[b.type],
+    }));
+  }, [getAllowedBlockTypes, project?.quotationType]);
+
   useEffect(() => {
     // Only set defaults for NEW quotations (when no existing quotation is loaded)
     if (project && client && !existingQuotation) {
@@ -453,11 +557,26 @@ export default function QuotationPage() {
         enquiryNumber: `${prefix}-RNS-${String(project.id).padStart(3, '0')}`,
         subject: defaultSubject,
       }));
+      setAccordionBlocks(getDefaultAccordionBlocks(project.quotationType === "Supply and Fabrication"));
     }
   }, [project, client, existingQuotation]);
 
   useEffect(() => {
     if (existingQuotation) {
+      let parsedContentSections: Partial<QuotationContentSections> | null = null;
+      if (existingQuotation.contentSections) {
+        try {
+          parsedContentSections = JSON.parse(existingQuotation.contentSections);
+          setContentSections(prev => ({ ...prev, ...parsedContentSections }));
+          setAccordionBlocks(normalizeAccordionBlocks(parsedContentSections?.accordionBlocks));
+        } catch (e) {
+          console.error("Failed to parse content sections:", e);
+          setAccordionBlocks(getDefaultAccordionBlocks(project?.quotationType === "Supply and Fabrication"));
+        }
+      } else {
+        setAccordionBlocks(getDefaultAccordionBlocks(project?.quotationType === "Supply and Fabrication"));
+      }
+
       setQuotationData({
         quotationNumber: existingQuotation.quotationNumber,
         revision: existingQuotation.revision,
@@ -475,19 +594,12 @@ export default function QuotationPage() {
         roofSlope: existingQuotation.roofSlope || "",
         paymentTerms: existingQuotation.paymentTerms || "",
         notes: existingQuotation.notes || "",
-        proposalTitle: "Techno-Commercial Offer",
+        proposalTitle: parsedContentSections?.proposalTitle || "Techno-Commercial Offer",
+        toLabel: parsedContentSections?.toLabel || "To",
+        msLabel: parsedContentSections?.msLabel || "M/s",
       });
-      
-      if (existingQuotation.contentSections) {
-        try {
-          const parsed = JSON.parse(existingQuotation.contentSections);
-          setContentSections(prev => ({ ...prev, ...parsed }));
-        } catch (e) {
-          console.error("Failed to parse content sections:", e);
-        }
-      }
     }
-  }, [existingQuotation]);
+  }, [existingQuotation, normalizeAccordionBlocks, project?.quotationType]);
 
   useEffect(() => {
     if (existingItems && existingItems.length > 0) {
@@ -504,12 +616,28 @@ export default function QuotationPage() {
     }
   }, [existingItems]);
 
+  useEffect(() => {
+    setExpandedBlockIds((prev) => {
+      const next: Record<string, boolean> = {};
+      accordionBlocks.forEach((block) => {
+        next[block.id] = prev[block.id] ?? true;
+      });
+      return next;
+    });
+  }, [accordionBlocks]);
+
   const createQuotationMutation = useMutation({
     mutationFn: async () => {
       const quotationRes = await apiRequest("POST", "/revira/api/quotations", {
         projectId: Number(projectId),
         ...quotationData,
-        contentSections: JSON.stringify(contentSections),
+        contentSections: JSON.stringify({
+          ...contentSections,
+          proposalTitle: quotationData.proposalTitle,
+          toLabel: quotationData.toLabel,
+          msLabel: quotationData.msLabel,
+          accordionBlocks,
+        }),
       });
       const quotation = await quotationRes.json();
       
@@ -530,7 +658,8 @@ export default function QuotationPage() {
       return quotation;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/revira/api/quotations", quotationId] });
+      queryClient.invalidateQueries({ queryKey: ["/revira/api/projects", projectId, "quotation", "latest"] });
+      queryClient.invalidateQueries({ queryKey: ["/revira/api/projects", projectId, "quotation", data.id] });
       queryClient.invalidateQueries({ queryKey: ["/revira/api/projects", projectId, "quotation-versions"] });
       // Navigate to the new quotation to update the URL and refetch
       setLocation(`/revira/projects/${projectId}/quotation/${data.id}`);
@@ -554,7 +683,13 @@ export default function QuotationPage() {
       
       await apiRequest("PUT", `/revira/api/quotations/${existingQuotation.id}`, {
         ...quotationData,
-        contentSections: JSON.stringify(contentSections),
+        contentSections: JSON.stringify({
+          ...contentSections,
+          proposalTitle: quotationData.proposalTitle,
+          toLabel: quotationData.toLabel,
+          msLabel: quotationData.msLabel,
+          accordionBlocks,
+        }),
       });
       
       if (existingItems) {
@@ -578,7 +713,7 @@ export default function QuotationPage() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/revira/api/projects", projectId, "quotation"] });
+      queryClient.invalidateQueries({ queryKey: ["/revira/api/projects", projectId, "quotation", quotationId || "latest"] });
       queryClient.invalidateQueries({ queryKey: ["/revira/api/quotations", existingQuotation?.id, "items"] });
       queryClient.invalidateQueries({ queryKey: ["/revira/api/projects", projectId, "quotation-versions"] });
       toast({
@@ -923,9 +1058,82 @@ export default function QuotationPage() {
     });
   }, []);
 
-  const toggleSection = (section: string) => {
-    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
-  };
+  const isBlockExpanded = useCallback((id: string) => expandedBlockIds[id] ?? true, [expandedBlockIds]);
+
+  const toggleBlockExpanded = useCallback((id: string) => {
+    setExpandedBlockIds((prev) => ({ ...prev, [id]: !(prev[id] ?? true) }));
+  }, []);
+
+  const setBlockExpanded = useCallback((id: string, expanded: boolean) => {
+    setExpandedBlockIds((prev) => ({ ...prev, [id]: expanded }));
+  }, []);
+
+  const moveAccordionBlock = useCallback((fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0) return;
+    setAccordionBlocks((prev) => {
+      if (fromIndex >= prev.length || toIndex >= prev.length) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+  }, []);
+
+  const removeAccordionBlock = useCallback((id: string) => {
+    setAccordionBlocks((prev) => prev.filter((block) => block.id !== id));
+    setExpandedBlockIds((prev) => {
+      const { [id]: _, ...rest } = prev;
+      return rest;
+    });
+  }, []);
+
+  const duplicateAccordionBlock = useCallback((id: string) => {
+    let duplicatedId: string | null = null;
+    setAccordionBlocks((prev) => {
+      const index = prev.findIndex((block) => block.id === id);
+      if (index === -1) return prev;
+      const source = prev[index];
+      const duplicate: AccordionBlockInstance = {
+        id: `${source.type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        type: source.type,
+        heading: source.heading,
+      };
+      duplicatedId = duplicate.id;
+      const next = [...prev];
+      next.splice(index + 1, 0, duplicate);
+      return next;
+    });
+    if (duplicatedId) {
+      setExpandedBlockIds((prev) => ({
+        ...prev,
+        [duplicatedId as string]: true,
+      }));
+    }
+  }, []);
+
+  const updateAccordionBlockHeading = useCallback((id: string, heading: string) => {
+    setAccordionBlocks((prev) =>
+      prev.map((block) => (block.id === id ? { ...block, heading } : block))
+    );
+  }, []);
+
+  const handleBlockDrop = useCallback((targetId: string) => {
+    if (!draggingBlockId || draggingBlockId === targetId) return;
+    const fromIndex = accordionBlocks.findIndex((b) => b.id === draggingBlockId);
+    const toIndex = accordionBlocks.findIndex((b) => b.id === targetId);
+    moveAccordionBlock(fromIndex, toIndex);
+    setDraggingBlockId(null);
+  }, [accordionBlocks, draggingBlockId, moveAccordionBlock]);
+
+  const getBlockInstances = useCallback(
+    (type: AccordionBlockType) => accordionBlocks.filter((block) => block.type === type),
+    [accordionBlocks]
+  );
+
+  const getBlockOrder = useCallback(
+    (id: string) => accordionBlocks.findIndex((block) => block.id === id),
+    [accordionBlocks]
+  );
 
   const handleExportPDF = async () => {
     setIsExporting(true);
@@ -1125,21 +1333,26 @@ export default function QuotationPage() {
       pdf.setFontSize(18);
       pdf.setTextColor('#da2032');
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Techno-Commercial Offer', pageWidth / 2, currentY, { align: 'center' });
+      pdf.text(quotationData.proposalTitle || 'Techno-Commercial Offer', pageWidth / 2, currentY, { align: 'center' });
       currentY += 15;
       
       pdf.setFontSize(11);
       pdf.setTextColor(0, 0, 0);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('To', margin, currentY);
+      pdf.text(quotationData.toLabel || 'To', margin, currentY);
       currentY += 6;
       pdf.setFont('helvetica', 'normal');
-      pdf.text(`M/s ${client?.name || '-'} ${client?.location || ''}`, margin, currentY);
-      currentY += 8;
+      pdf.text(`${quotationData.msLabel || 'M/s'} ${client?.name || '-'}`, margin, currentY);
+      currentY += 6;
+
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`${client?.location || ''}`, margin, currentY);
+      currentY += 12;
       
       pdf.setFont('helvetica', 'bold');
       pdf.text(`Subject: ${quotationData.subject}`, margin, currentY);
-      currentY += 10;
+      currentY += 12;
       
       pdf.setFont('helvetica', 'normal');
       contentSections.introSections.forEach((section) => {
@@ -1174,7 +1387,7 @@ export default function QuotationPage() {
       currentY += 15;
       
       const indexStartY = currentY;
-      const sectionPages: Record<string, number> = {};
+      const indexData: Array<{ title: string; page: number }> = [];
       
       currentY += 80;
       
@@ -1183,117 +1396,152 @@ export default function QuotationPage() {
       addHeaderFooterStamp(currentPage);
       currentY = headerHeight + 10;
       
-      // Scope sections only for Supply and Fabrication template
-      if (project?.quotationType === "Supply and Fabrication") {
-        sectionPages['Scope of Supply'] = currentPage;
-        addTitle('1.0 - SCOPE OF SUPPLY', 14, '#1e3a5f');
-        
-        addTitle('Brief Details', 11, '#333333');
-        addTable(['Sl. No.', 'Description', 'Details'],
-          contentSections.scopeBriefDetails.map(row => [row.slNo.toString(), row.description, row.details]),
-          [25, 90, 65]
-        );
-        
-        addTitle('Basic Building Description', 11, '#333333');
-        addTable(['Sl. No.', 'Description', 'Details'],
-          contentSections.scopeBasicBuilding.map(row => [row.slNo.toString(), row.description, row.details]),
-          [25, 90, 65]
-        );
-        
-        addTitle('Standard Building Additions', 11, '#333333');
-        addTable(['Sr. No.', 'Description', 'Details'],
-          contentSections.scopeBuildingAdditions.map(row => [row.slNo.toString(), row.description, row.details]),
-          [25, 90, 65]
-        );
-        
-        checkNewPage(50);
-        sectionPages['Steel Work Finish'] = currentPage;
-        addTitle('2.0 STEEL WORK FINISH', 14, '#1e3a5f');
-        addTable(['No.', 'Description', 'Details'],
-          contentSections.steelWorkFinish.map(row => [row.slNo.toString(), row.description, row.details]),
-          [20, 80, 80]
-        );
-        
-        checkNewPage(50);
-        sectionPages['Design Loads'] = currentPage;
-        addTitle('3.0 DESIGN LOADS', 14, '#1e3a5f');
-        addTable(['Sr. No.', 'Description', 'Details'],
-          contentSections.designLoads.map(row => [row.slNo.toString(), row.description, row.details]),
-          [25, 90, 65]
-        );
-        
-        sectionPages['Applicable Codes'] = currentPage;
-        addTitle('APPLICABLE CODES for Design:', 12, '#1e3a5f');
-        contentSections.applicableCodes.forEach((code) => {
-          addText(`• ${code}`, 9, 5);
-        });
-        
-        checkNewPage(50);
-        sectionPages['Material Specifications'] = currentPage;
-        addTitle('4.0 MATERIAL SPECIFICATIONS', 14, '#1e3a5f');
-        addTable(['SI. No.', 'Structural Components', 'Details'],
-          contentSections.materialSpecs.map(row => [row.slNo.toString(), row.description, row.details]),
-          [25, 90, 65]
-        );
-        
-        checkNewPage(50);
-        sectionPages['Drawings & Delivery'] = currentPage;
-        addTitle('5.0 DRAWINGS & DELIVERY', 14, '#1e3a5f');
-        contentSections.drawingsDelivery.forEach((item) => {
-          addText(`• ${item}`, 9, 5);
-        });
-        
-        checkNewPage(50);
-        sectionPages['Erection Scopes'] = currentPage;
-        addTitle('6.0 ERECTION - SCOPES', 14, '#1e3a5f');
-        addTitle('Scope of Client', 11, '#333333');
-        contentSections.erectionScopeClient.forEach((item) => {
-          addText(`• ${item}`, 9, 5);
-        });
-        addTitle('Scope of Company', 11, '#333333');
-        contentSections.erectionScopeCompany.forEach((item) => {
-          addText(`• ${item}`, 9, 5);
-        });
-      }
-      
-      checkNewPage(60);
-      sectionPages['Commercial Price'] = currentPage;
-      const commercialSectionNum = project?.quotationType === "Supply and Fabrication" ? "12.0" : "01";
-      addTitle(`${commercialSectionNum} COMMERCIAL PRICE & PAYMENT TERMS`, 14, '#1e3a5f');
-      const priceHeaders = ['S.N.', 'Description', 'UOM', 'QTY', 'Rate', 'Amount', 'Remarks'];
-      const priceRows = lineItems.map(item => [
-        item.serialNo.toString(),
-        item.description,
-        item.unit,
-        item.quantity.toString(),
-        `Rs.${item.rate.toLocaleString('en-IN')}`,
-        `Rs.${item.amount.toLocaleString('en-IN')}`,
-        item.remarks || ''
-      ]);
-      addTable(priceHeaders, priceRows, [15, 55, 20, 20, 25, 30, 15]);
-      
-      addTitle('Payment Terms:', 11, '#333333');
-      contentSections.paymentTerms.forEach((term, idx) => {
-        addText(`${idx + 1}. ${term}`, 9, 5);
+      accordionBlocks.forEach((block, idx) => {
+        const blockTitle = (block.heading && block.heading.trim().length > 0)
+          ? block.heading
+          : (BLOCK_LABELS[block.type] || `Section ${idx + 1}`);
+        const baseIndexTitle = blockTitle;
+        const duplicateCount = accordionBlocks.slice(0, idx).filter((b) => b.heading === block.heading).length;
+        const indexTitle = duplicateCount > 0 ? `${baseIndexTitle} (${duplicateCount + 1})` : baseIndexTitle;
+        indexData.push({ title: indexTitle, page: currentPage });
+
+        switch (block.type) {
+          case "scopeBrief":
+            checkNewPage(50);
+            addTitle(blockTitle, 14, '#1e3a5f');
+            addTable(
+              ['Sl. No.', 'Description', 'Details'],
+              contentSections.scopeBriefDetails.map(row => [row.slNo.toString(), row.description, row.details]),
+              [25, 90, 65]
+            );
+            break;
+          case "scopeBasic":
+            checkNewPage(50);
+            addTitle(blockTitle, 14, '#1e3a5f');
+            addTable(
+              ['Sl. No.', 'Description', 'Details'],
+              contentSections.scopeBasicBuilding.map(row => [row.slNo.toString(), row.description, row.details]),
+              [25, 90, 65]
+            );
+            break;
+          case "scopeAdditions":
+            checkNewPage(50);
+            addTitle(blockTitle, 14, '#1e3a5f');
+            addTable(
+              ['Sr. No.', 'Description', 'Details'],
+              contentSections.scopeBuildingAdditions.map(row => [row.slNo.toString(), row.description, row.details]),
+              [25, 90, 65]
+            );
+            break;
+          case "steelWork":
+            checkNewPage(50);
+            addTitle(blockTitle, 14, '#1e3a5f');
+            addTable(
+              ['No.', 'Description', 'Details'],
+              contentSections.steelWorkFinish.map(row => [row.slNo.toString(), row.description, row.details]),
+              [20, 80, 80]
+            );
+            break;
+          case "designLoads":
+            checkNewPage(50);
+            addTitle(blockTitle, 14, '#1e3a5f');
+            addTable(
+              ['Sr. No.', 'Description', 'Details'],
+              contentSections.designLoads.map(row => [row.slNo.toString(), row.description, row.details]),
+              [25, 90, 65]
+            );
+            break;
+          case "applicableCodes":
+            checkNewPage(45);
+            addTitle(blockTitle, 14, '#1e3a5f');
+            contentSections.applicableCodes.forEach((code) => {
+              addText(`• ${code}`, 9, 5);
+            });
+            break;
+          case "materialSpecs":
+            checkNewPage(50);
+            addTitle(blockTitle, 14, '#1e3a5f');
+            addTable(
+              ['SI. No.', 'Structural Components', 'Details'],
+              contentSections.materialSpecs.map(row => [row.slNo.toString(), row.description, row.details]),
+              [25, 90, 65]
+            );
+            break;
+          case "drawingsDelivery":
+            checkNewPage(45);
+            addTitle(blockTitle, 14, '#1e3a5f');
+            contentSections.drawingsDelivery.forEach((item) => {
+              addText(`• ${item}`, 9, 5);
+            });
+            break;
+          case "erectionScopeClient":
+            checkNewPage(45);
+            addTitle(blockTitle, 14, '#1e3a5f');
+            contentSections.erectionScopeClient.forEach((item) => {
+              addText(`• ${item}`, 9, 5);
+            });
+            break;
+          case "erectionScopeCompany":
+            checkNewPage(45);
+            addTitle(blockTitle, 14, '#1e3a5f');
+            contentSections.erectionScopeCompany.forEach((item) => {
+              addText(`• ${item}`, 9, 5);
+            });
+            break;
+          case "commercialPrice":
+            checkNewPage(60);
+            addTitle(blockTitle, 14, '#1e3a5f');
+            const priceHeaders = ['S.N.', 'Description', 'UOM', 'QTY', 'Rate', 'Amount', 'Remarks'];
+            const priceRows = lineItems.map(item => [
+              item.serialNo.toString(),
+              item.description,
+              item.unit,
+              item.quantity.toString(),
+              `Rs.${item.rate.toLocaleString('en-IN')}`,
+              `Rs.${item.amount.toLocaleString('en-IN')}`,
+              item.remarks || ''
+            ]);
+            addTable(priceHeaders, priceRows, [15, 55, 20, 20, 25, 30, 15]);
+
+            const commercialTotalAmount = calculateTotal();
+            checkNewPage(18);
+            const totalBlockWidth = 75;
+            const totalBlockHeight = 9;
+            const totalBlockX = pageWidth - margin - totalBlockWidth;
+            pdf.setFillColor('#fff5f5');
+            pdf.setDrawColor('#eeb7b7');
+            pdf.setLineWidth(0.2);
+            pdf.rect(totalBlockX, currentY - 3, totalBlockWidth, totalBlockHeight, 'FD');
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(10);
+            pdf.setTextColor(0, 0, 0);
+            const formattedCommercialTotal = commercialTotalAmount.toLocaleString('en-IN');
+            pdf.text(`Total Amount: ${formattedCommercialTotal}.`, totalBlockX + 3, currentY + 2);
+            currentY += totalBlockHeight + 2;
+
+            addTitle('Payment Terms:', 11, '#333333');
+            contentSections.paymentTerms.forEach((term, termIdx) => {
+              addText(`${termIdx + 1}. ${term}`, 9, 5);
+            });
+
+            addTitle('BANK DETAILS', 11, '#1e3a5f');
+            contentSections.bankDetails.forEach((detail) => {
+              addText(`${detail.particular}: ${detail.value}`, 9, 0);
+            });
+            break;
+          case "commercialTerms":
+            checkNewPage(80);
+            addTitle(blockTitle, 14, '#1e3a5f');
+            addTable(
+              ['SI. No.', 'Description', 'Conditions'],
+              contentSections.commercialTerms.map(t => [t.slNo.toString(), t.description, t.conditions]),
+              [20, 45, 115]
+            );
+            break;
+          default:
+            break;
+        }
       });
-      
-      addTitle('BANK DETAILS', 11, '#1e3a5f');
-      contentSections.bankDetails.forEach((detail) => {
-        addText(`${detail.particular}: ${detail.value}`, 9, 0);
-      });
-      
-      // Commercial Terms & Conditions - Only for Supply and Fabrication
-      if (project?.quotationType === "Supply and Fabrication") {
-        checkNewPage(80);
-        sectionPages['Commercial Terms & Conditions'] = currentPage;
-        addTitle('13.0 COMMERCIAL TERMS & CONDITIONS', 14, '#1e3a5f');
-        
-        addTable(
-          ['SI. No.', 'Description', 'Conditions'],
-          contentSections.commercialTerms.map(t => [t.slNo.toString(), t.description, t.conditions]),
-          [20, 45, 115]
-        );
-      }
       
       checkNewPage(30);
       addTitle('Notes:', 11, '#333333');
@@ -1324,23 +1572,6 @@ export default function QuotationPage() {
       pdf.setPage(indexPageNum);
       const indexTableY = indexStartY;
       const rowHeight = 8;
-      
-      // INDEX data depends on template type
-      const indexData = project?.quotationType === "Supply and Fabrication" 
-        ? [
-            { title: 'Scope of Supply', page: sectionPages['Scope of Supply'] },
-            { title: 'Steel Work Finish', page: sectionPages['Steel Work Finish'] },
-            { title: 'Design Loads', page: sectionPages['Design Loads'] },
-            { title: 'Applicable Codes', page: sectionPages['Applicable Codes'] },
-            { title: 'Material Specifications', page: sectionPages['Material Specifications'] },
-            { title: 'Drawings & Delivery', page: sectionPages['Drawings & Delivery'] },
-            { title: 'Erection Scopes', page: sectionPages['Erection Scopes'] },
-            { title: 'Commercial Price & Payment Terms', page: sectionPages['Commercial Price'] },
-            { title: 'Commercial Terms & Conditions', page: sectionPages['Commercial Terms & Conditions'] },
-          ]
-        : [
-            { title: 'Commercial Price & Payment Terms', page: sectionPages['Commercial Price'] },
-          ];
       
       const indexBorderColor = '#eeb7b7';
       const colWidths = [25, 120, contentWidth - 145];
@@ -1685,9 +1916,30 @@ export default function QuotationPage() {
             </div>
             
             <CardContent className="p-6 space-y-4">
-              <div>
-                <p className="font-semibold text-slate-700">To,</p>
-                <p className="font-semibold text-slate-800 mt-1">M/s {client.name} {client.location}</p>
+              <div className="space-y-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-slate-500">To Label</label>
+                    <Input
+                      value={quotationData.toLabel}
+                      onChange={(e) => setQuotationData({ ...quotationData, toLabel: e.target.value })}
+                      className="mt-1"
+                      data-testid="input-to-label"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500">M/s Label</label>
+                    <Input
+                      value={quotationData.msLabel}
+                      onChange={(e) => setQuotationData({ ...quotationData, msLabel: e.target.value })}
+                      className="mt-1"
+                      data-testid="input-ms-label"
+                    />
+                  </div>
+                </div>
+                <p className="font-semibold text-slate-700">{quotationData.toLabel || "To"},</p>
+                <p className="font-semibold text-slate-800 mt-1">{(quotationData.msLabel || "M/s") + " " + client.name}</p>
+                <p className="text-slate-600 text-slate-700 mt-1">{client.location}</p>
               </div>
               
               <div>
@@ -1740,6 +1992,75 @@ export default function QuotationPage() {
             </CardContent>
           </Card>
 
+          <Card className="shadow-sm border-[#eeb7b7]">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-slate-700">Accordion Block Manager</h3>
+                <span className="text-xs text-slate-500">Drag to sort, duplicate, or remove</span>
+              </div>
+              <div className="space-y-2">
+                {accordionBlocks.map((block, index) => (
+                  <div
+                    key={block.id}
+                    draggable
+                    onDragStart={() => setDraggingBlockId(block.id)}
+                    onDragEnd={() => setDraggingBlockId(null)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => handleBlockDrop(block.id)}
+                    className="flex items-center gap-2 p-2 border rounded-md bg-slate-50"
+                  >
+                    <GripVertical className="h-4 w-4 text-slate-400 cursor-move" />
+                    <Input
+                      value={block.heading}
+                      onChange={(e) => updateAccordionBlockHeading(block.id, e.target.value)}
+                      onBlur={() => {
+                        if (!block.heading.trim()) {
+                          updateAccordionBlockHeading(block.id, BLOCK_LABELS[block.type]);
+                        }
+                      }}
+                      className="h-8 flex-1 bg-white"
+                      data-testid={`input-block-heading-${block.id}`}
+                    />
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8"
+                      disabled={index === 0}
+                      onClick={() => moveAccordionBlock(index, index - 1)}
+                    >
+                      <ChevronUp className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8"
+                      disabled={index === accordionBlocks.length - 1}
+                      onClick={() => moveAccordionBlock(index, index + 1)}
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8"
+                      onClick={() => duplicateAccordionBlock(block.id)}
+                    >
+                      <Copy className="h-4 w-4 text-[#d92134]" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8"
+                      onClick={() => removeAccordionBlock(block.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Block 3: Master Signatory Authority */}
           <Card className="shadow-sm">
             <div className="flex items-center gap-3 px-6 py-4 border-b bg-slate-50">
@@ -1782,84 +2103,96 @@ export default function QuotationPage() {
             </CardContent>
           </Card>
 
+          <div className="flex flex-col gap-4">
           {/* Scope sections - Only for Supply and Fabrication template */}
           {project?.quotationType === "Supply and Fabrication" && (
             <>
               {/* Block 4: Scope of Supply - Brief Details */}
-              <div className="space-y-4">
+              {getBlockInstances("scopeBrief").map((blockInstance) => (
+              <div key={blockInstance.id} className="space-y-4" style={{ order: getBlockOrder(blockInstance.id) }}>
                 <SectionHeader 
-                  title="SCOPE OF SUPPLY - BRIEF DETAILS" 
+                  title={blockInstance.heading}
                   number="01" 
-                  expanded={expandedSections.scopeBrief}
-                  onToggle={() => toggleSection('scopeBrief')}
+                  expanded={isBlockExpanded(blockInstance.id)}
+                  onToggle={() => toggleBlockExpanded(blockInstance.id)}
                 />
-                {expandedSections.scopeBrief && (
+                {isBlockExpanded(blockInstance.id) && (
                   <ScopeTable data={contentSections.scopeBriefDetails} section="scopeBriefDetails" onUpdateRow={updateScopeRow} onRemoveRow={removeScopeRow} onAddRow={addScopeRow} />
                 )}
               </div>
+              ))}
 
               {/* Block 5: Scope of Supply - Basic Building Description */}
-              <div className="space-y-4">
+              {getBlockInstances("scopeBasic").map((blockInstance) => (
+              <div key={blockInstance.id} className="space-y-4" style={{ order: getBlockOrder(blockInstance.id) }}>
                 <SectionHeader 
-                  title="SCOPE OF SUPPLY - BASIC BUILDING DESCRIPTION" 
+                  title={blockInstance.heading}
                   number="02" 
-                  expanded={expandedSections.scopeBasic}
-                  onToggle={() => toggleSection('scopeBasic')}
+                  expanded={isBlockExpanded(blockInstance.id)}
+                  onToggle={() => toggleBlockExpanded(blockInstance.id)}
                 />
-                {expandedSections.scopeBasic && (
+                {isBlockExpanded(blockInstance.id) && (
                   <ScopeTable data={contentSections.scopeBasicBuilding} section="scopeBasicBuilding" onUpdateRow={updateScopeRow} onRemoveRow={removeScopeRow} onAddRow={addScopeRow} />
                 )}
               </div>
+              ))}
 
               {/* Block 6: Standard Building Additions */}
-              <div className="space-y-4">
+              {getBlockInstances("scopeAdditions").map((blockInstance) => (
+              <div key={blockInstance.id} className="space-y-4" style={{ order: getBlockOrder(blockInstance.id) }}>
                 <SectionHeader 
-                  title="STANDARD BUILDING ADDITIONS (CANOPY / FASCIA / LINER / PARTITIONS)" 
+                  title={blockInstance.heading}
                   number="03" 
-                  expanded={expandedSections.scopeAdditions}
-                  onToggle={() => toggleSection('scopeAdditions')}
+                  expanded={isBlockExpanded(blockInstance.id)}
+                  onToggle={() => toggleBlockExpanded(blockInstance.id)}
                 />
-                {expandedSections.scopeAdditions && (
+                {isBlockExpanded(blockInstance.id) && (
                   <ScopeTable data={contentSections.scopeBuildingAdditions} section="scopeBuildingAdditions" onUpdateRow={updateScopeRow} onRemoveRow={removeScopeRow} onAddRow={addScopeRow} />
                 )}
               </div>
+              ))}
 
               {/* Block 7: Steel Work Finish */}
-              <div className="space-y-4">
+              {getBlockInstances("steelWork").map((blockInstance) => (
+              <div key={blockInstance.id} className="space-y-4" style={{ order: getBlockOrder(blockInstance.id) }}>
                 <SectionHeader 
-                  title="STEEL WORK FINISH" 
+                  title={blockInstance.heading}
                   number="04" 
-                  expanded={expandedSections.steelWork}
-                  onToggle={() => toggleSection('steelWork')}
+                  expanded={isBlockExpanded(blockInstance.id)}
+                  onToggle={() => toggleBlockExpanded(blockInstance.id)}
                 />
-                {expandedSections.steelWork && (
+                {isBlockExpanded(blockInstance.id) && (
                   <ScopeTable data={contentSections.steelWorkFinish} section="steelWorkFinish" onUpdateRow={updateScopeRow} onRemoveRow={removeScopeRow} onAddRow={addScopeRow} />
                 )}
               </div>
+              ))}
 
               {/* Block 8: Design Loads */}
-              <div className="space-y-4">
+              {getBlockInstances("designLoads").map((blockInstance) => (
+              <div key={blockInstance.id} className="space-y-4" style={{ order: getBlockOrder(blockInstance.id) }}>
                 <SectionHeader 
-                  title="DESIGN LOADS" 
+                  title={blockInstance.heading}
                   number="05" 
-                  expanded={expandedSections.designLoads}
-                  onToggle={() => toggleSection('designLoads')}
+                  expanded={isBlockExpanded(blockInstance.id)}
+                  onToggle={() => toggleBlockExpanded(blockInstance.id)}
                 />
-                {expandedSections.designLoads && (
+                {isBlockExpanded(blockInstance.id) && (
                   <ScopeTable data={contentSections.designLoads} section="designLoads" onUpdateRow={updateScopeRow} onRemoveRow={removeScopeRow} onAddRow={addScopeRow} />
                 )}
               </div>
+              ))}
 
               {/* Block 8.5: Applicable Codes for Design */}
-              <div className="space-y-4">
+              {getBlockInstances("applicableCodes").map((blockInstance) => (
+              <div key={blockInstance.id} className="space-y-4" style={{ order: getBlockOrder(blockInstance.id) }}>
                 <SectionHeader 
-                  title="APPLICABLE CODES for Design" 
+                  title={blockInstance.heading}
                   number="" 
-                  expanded={expandedSections.applicableCodes}
-                  onToggle={() => toggleSection('applicableCodes')}
+                  expanded={isBlockExpanded(blockInstance.id)}
+                  onToggle={() => toggleBlockExpanded(blockInstance.id)}
                   onAdd={addApplicableCode}
                 />
-                {expandedSections.applicableCodes && (
+                {isBlockExpanded(blockInstance.id) && (
                   <Card className="shadow-sm">
                     <CardContent className="p-6">
                       <ul className="space-y-3 text-sm">
@@ -1890,6 +2223,9 @@ export default function QuotationPage() {
                                 >
                                   <Edit3 className="h-4 w-4" />
                                 </Button>
+                                 <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => removeApplicableCode(index)}>
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
                               </>
                             )}
                           </li>
@@ -1899,30 +2235,34 @@ export default function QuotationPage() {
                   </Card>
                 )}
               </div>
+              ))}
 
               {/* Block 9: Material Specifications */}
-              <div className="space-y-4">
+              {getBlockInstances("materialSpecs").map((blockInstance) => (
+              <div key={blockInstance.id} className="space-y-4" style={{ order: getBlockOrder(blockInstance.id) }}>
                 <SectionHeader 
-                  title="MATERIAL SPECIFICATIONS" 
+                  title={blockInstance.heading}
                   number="06" 
-                  expanded={expandedSections.materialSpecs}
-                  onToggle={() => toggleSection('materialSpecs')}
+                  expanded={isBlockExpanded(blockInstance.id)}
+                  onToggle={() => toggleBlockExpanded(blockInstance.id)}
                 />
-                {expandedSections.materialSpecs && (
+                {isBlockExpanded(blockInstance.id) && (
                   <ScopeTable data={contentSections.materialSpecs} section="materialSpecs" onUpdateRow={updateScopeRow} onRemoveRow={removeScopeRow} onAddRow={addScopeRow} />
                 )}
               </div>
+              ))}
 
               {/* Drawings & Delivery Section */}
-              <div className="space-y-4">
+              {getBlockInstances("drawingsDelivery").map((blockInstance) => (
+              <div key={blockInstance.id} className="space-y-4" style={{ order: getBlockOrder(blockInstance.id) }}>
                 <SectionHeader 
-                  title="DRAWINGS & DELIVERY" 
+                  title={blockInstance.heading}
                   number="09" 
-                  expanded={expandedSections.drawingsDelivery}
-                  onToggle={() => toggleSection('drawingsDelivery')}
+                  expanded={isBlockExpanded(blockInstance.id)}
+                  onToggle={() => toggleBlockExpanded(blockInstance.id)}
                   onAdd={addDrawingsDeliveryItem}
                 />
-                {expandedSections.drawingsDelivery && (
+                {isBlockExpanded(blockInstance.id) && (
                   <Card className="shadow-sm">
                     <CardContent className="p-6">
                       <ul className="space-y-3 text-sm">
@@ -1953,6 +2293,9 @@ export default function QuotationPage() {
                                 >
                                   <Edit3 className="h-4 w-4" />
                                 </Button>
+                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => removeDrawingsDeliveryItem(index)}>
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
                               </>
                             )}
                           </li>
@@ -1962,17 +2305,19 @@ export default function QuotationPage() {
                   </Card>
                 )}
               </div>
+              ))}
 
               {/* Erection Scopes - Scope of Client */}
-              <div className="space-y-4">
+              {getBlockInstances("erectionScopeClient").map((blockInstance) => (
+              <div key={blockInstance.id} className="space-y-4" style={{ order: getBlockOrder(blockInstance.id) }}>
                 <SectionHeader 
-                  title="ERECTION SCOPES - SCOPE OF CLIENT" 
+                  title={blockInstance.heading}
                   number="10" 
-                  expanded={expandedSections.erectionScopeClient}
-                  onToggle={() => toggleSection('erectionScopeClient')}
+                  expanded={isBlockExpanded(blockInstance.id)}
+                  onToggle={() => toggleBlockExpanded(blockInstance.id)}
                   onAdd={addErectionClientItem}
                 />
-                {expandedSections.erectionScopeClient && (
+                {isBlockExpanded(blockInstance.id) && (
                   <Card className="shadow-sm">
                     <CardContent className="p-6">
                       <ul className="space-y-3 text-sm">
@@ -2003,6 +2348,9 @@ export default function QuotationPage() {
                                 >
                                   <Edit3 className="h-4 w-4" />
                                 </Button>
+                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => removeErectionClientItem(index)}>
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
                               </>
                             )}
                           </li>
@@ -2012,17 +2360,19 @@ export default function QuotationPage() {
                   </Card>
                 )}
               </div>
+              ))}
 
               {/* Erection Scopes - Scope of Company */}
-              <div className="space-y-4">
+              {getBlockInstances("erectionScopeCompany").map((blockInstance) => (
+              <div key={blockInstance.id} className="space-y-4" style={{ order: getBlockOrder(blockInstance.id) }}>
                 <SectionHeader 
-                  title="ERECTION SCOPES - SCOPE OF COMPANY" 
+                  title={blockInstance.heading}
                   number="11" 
-                  expanded={expandedSections.erectionScopeCompany}
-                  onToggle={() => toggleSection('erectionScopeCompany')}
+                  expanded={isBlockExpanded(blockInstance.id)}
+                  onToggle={() => toggleBlockExpanded(blockInstance.id)}
                   onAdd={addErectionCompanyItem}
                 />
-                {expandedSections.erectionScopeCompany && (
+                {isBlockExpanded(blockInstance.id) && (
                   <Card className="shadow-sm">
                     <CardContent className="p-6">
                       <ul className="space-y-3 text-sm">
@@ -2053,6 +2403,9 @@ export default function QuotationPage() {
                                 >
                                   <Edit3 className="h-4 w-4" />
                                 </Button>
+                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => removeErectionCompanyItem(index)}>
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
                               </>
                             )}
                           </li>
@@ -2062,19 +2415,28 @@ export default function QuotationPage() {
                   </Card>
                 )}
               </div>
+              ))}
             </>
           )}
 
           {/* Commercial Price & Payment Terms */}
-          <Accordion type="single" collapsible defaultValue="commercial-price">
-            <AccordionItem value="commercial-price" className="border-0">
+          {getBlockInstances("commercialPrice").map((blockInstance) => (
+          <Accordion
+            key={blockInstance.id}
+            type="single"
+            collapsible
+            value={isBlockExpanded(blockInstance.id) ? `commercial-price-${blockInstance.id}` : ""}
+            onValueChange={(value) => setBlockExpanded(blockInstance.id, value === `commercial-price-${blockInstance.id}`)}
+            style={{ order: getBlockOrder(blockInstance.id) }}
+          >
+            <AccordionItem value={`commercial-price-${blockInstance.id}`} className="border-0">
               <AccordionTrigger className="p-0 hover:no-underline [&>svg]:hidden text-left">
                 <div className="w-full text-left">
                   <SectionHeader 
-                    title="COMMERCIAL PRICE & PAYMENT TERMS" 
+                    title={blockInstance.heading}
                     number={project?.quotationType === "Supply and Fabrication" ? "12" : "01"} 
-                    expanded={true}
-                    onToggle={() => {}}
+                    expanded={isBlockExpanded(blockInstance.id)}
+                    onToggle={() => toggleBlockExpanded(blockInstance.id)}
                   />
                 </div>
               </AccordionTrigger>
@@ -2128,7 +2490,7 @@ export default function QuotationPage() {
                           type="number"
                           value={item.rate}
                           onChange={(e) => updateLineItem(index, 'rate', e.target.value)}
-                          className="h-8 text-sm text-right border-0 bg-transparent focus:bg-white"
+                          className="h-8 min-w-[90px] text-sm text-right border-0 bg-transparent focus:bg-white"
                           data-testid={`input-item-rate-${index}`}
                         />
                       </td>
@@ -2344,18 +2706,26 @@ export default function QuotationPage() {
               </AccordionContent>
             </AccordionItem>
           </Accordion>
+          ))}
 
           {/* Commercial Terms & Conditions Section - Only for Supply and Fabrication */}
-          {project?.quotationType === "Supply and Fabrication" && (
-            <Accordion type="single" collapsible defaultValue="terms-conditions">
-              <AccordionItem value="terms-conditions" className="border-0">
+          {project?.quotationType === "Supply and Fabrication" && getBlockInstances("commercialTerms").map((blockInstance) => (
+            <Accordion
+              key={blockInstance.id}
+              type="single"
+              collapsible
+              value={isBlockExpanded(blockInstance.id) ? `terms-conditions-${blockInstance.id}` : ""}
+              onValueChange={(value) => setBlockExpanded(blockInstance.id, value === `terms-conditions-${blockInstance.id}`)}
+              style={{ order: getBlockOrder(blockInstance.id) }}
+            >
+              <AccordionItem value={`terms-conditions-${blockInstance.id}`} className="border-0">
                 <AccordionTrigger className="p-0 hover:no-underline [&>svg]:hidden text-left">
                   <div className="w-full text-left">
                     <SectionHeader 
-                      title="COMMERCIAL TERMS & CONDITIONS" 
+                      title={blockInstance.heading}
                       number="08" 
-                      expanded={true}
-                      onToggle={() => {}}
+                      expanded={isBlockExpanded(blockInstance.id)}
+                      onToggle={() => toggleBlockExpanded(blockInstance.id)}
                       onAdd={addCommercialTerm}
                     />
                   </div>
@@ -2452,7 +2822,8 @@ export default function QuotationPage() {
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
-          )}
+          ))}
+          </div>
 
           {/* Notes Section */}
           <Card className="shadow-sm">
@@ -2504,7 +2875,7 @@ export default function QuotationPage() {
                         </Button>
                         <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => removeNote(index)}>
                               <Trash2 className="h-4 w-4 text-red-600" />
-                            </Button>
+                        </Button>
                       </>
                     )}
                   </li>

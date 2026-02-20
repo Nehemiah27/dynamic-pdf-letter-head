@@ -8,31 +8,44 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save, FileText, Download, Trash2, Copy, Eye, Plus, X, MapPin } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { LayoutShell } from "@/components/layout-shell";
 import { useUser } from "@/hooks/use-auth";
-import type { Project, Client, Invoice, InvoiceItem, Branding } from "@shared/schema";
+import type { Project, Client, GatePass, GatePassItem, Branding } from "@shared/schema";
 import jsPDF from "jspdf";
 
-interface InvoiceLineItem {
+interface GatePassLineItem {
   id: number;
   serialNo: number;
-  description: string;
-  hsnCode: string;
+  partMark: string;
+  materialDescription: string;
+  materialSize: string;
   quantity: number;
-  unit: string;
-  ratePerUnit: number;
-  percentage: number;
-  amount: number;
+  asslyPartSl: string;
+  approxValue: string;
   remarks: string;
 }
 
-type InvoiceType = "PROFORMA INVOICE" | "TAX INVOICE";
+type GatePassType = "GATE PASS";
 
-interface InvoiceContentSectionsData {
-  invoiceType?: InvoiceType;
+interface GatePassContentSectionsData {
+  gatePassType?: GatePassType;
+  issueNo?: string;
+  issueDate?: string;
+  revNo?: string;
+  revDate?: string;
+  consigneeName?: string;
+  consigneeAddressText?: string;
+  modeOfTransport?: string;
+  vehicleNumber?: string;
+  transportVehicle?: string;
+  contactNo?: string;
+  contactPerson?: string;
+  remarkText?: string;
+  storeKeeperSignature?: string;
+  qcEnggSignature?: string;
+  storeInchargeSignature?: string;
+  plantHeadSignature?: string;
   orderReferenceType?: "wo" | "po";
   showWorkOrderNo?: boolean;
   showPurchaseOrderNo?: boolean;
@@ -46,18 +59,39 @@ interface InvoiceContentSectionsData {
   dispatchGatePass?: string;
 }
 
-export default function InvoicePage() {
-  const params = useParams<{ id: string; invoiceId?: string }>();
+export default function GatePassPage() {
+  type SignatureField =
+    | "storeKeeperSignature"
+    | "qcEnggSignature"
+    | "storeInchargeSignature"
+    | "plantHeadSignature";
+  const params = useParams<{ id: string; gatePassId?: string }>();
   const projectId = params.id;
-  const invoiceId = params.invoiceId;
+  const gatePassId = params.gatePassId;
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [versionsDialogOpen, setVersionsDialogOpen] = useState(false);
 
-  const [invoiceData, setInvoiceData] = useState({
-    invoiceNumber: "",
+  const [gatePassData, setGatePassData] = useState({
+    gatePassNumber: "",
     revision: "R-001",
-    invoiceType: "PROFORMA INVOICE" as InvoiceType,
+    gatePassType: "GATE PASS" as GatePassType,
+    issueNo: "001",
+    issueDate: "",
+    revNo: "00",
+    revDate: "",
+    consigneeName: "Company Name",
+    consigneeAddressText: "PLOT NO. D3, MIDC Umred, Girad Mohpa Road, Belgaon Umred Nagpur, Maharashtra-441203",
+    modeOfTransport: "By Road",
+    vehicleNumber: "MH 40 CX 2839",
+    transportVehicle: "By Road - MH 40 CX 2839",
+    contactNo: "7972800638",
+    contactPerson: "SAILESH",
+    remarkText: "",
+    storeKeeperSignature: "",
+    qcEnggSignature: "",
+    storeInchargeSignature: "",
+    plantHeadSignature: "",
     organisationName: "",
     registeredAddress: "",
     consigneeAddress: "",
@@ -79,8 +113,28 @@ export default function InvoicePage() {
     igstRate: "18",
   });
 
-  const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([
-    { id: 1, serialNo: 1, description: "", hsnCode: "940610", quantity: 1, unit: "LS", ratePerUnit: 0, percentage: 0, amount: 0, remarks: "" }
+  const getProjectShortName = (name: string) => {
+    const words = name
+      .split(/\s+/)
+      .map((w) => w.trim())
+      .filter(Boolean);
+    if (!words.length) return "PROJECT";
+    return words.map((w) => w[0]).join("").toUpperCase();
+  };
+
+  const toDocDate = (date: Date) => {
+    const dd = String(date.getDate()).padStart(2, "0");
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const yy = String(date.getFullYear()).slice(-2);
+    return `${dd}-${mm}-${yy}`;
+  };
+
+  const [lineItems, setLineItems] = useState<GatePassLineItem[]>([
+    { id: 1, serialNo: 1, partMark: "PRA-BS2-193", materialDescription: "BEAM", materialSize: "20", quantity: 1, asslyPartSl: "5/8", approxValue: "-", remarks: "" },
+    { id: 2, serialNo: 2, partMark: "PRA-BS2-193", materialDescription: "BEAM", materialSize: "30", quantity: 1, asslyPartSl: "6/8", approxValue: "-", remarks: "" },
+    { id: 3, serialNo: 3, partMark: "PRA-BS2-193", materialDescription: "BEAM", materialSize: "-", quantity: 1, asslyPartSl: "7/8", approxValue: "-", remarks: "" },
+    { id: 4, serialNo: 4, partMark: "PRA-BS2-193", materialDescription: "BEAM", materialSize: "10", quantity: 1, asslyPartSl: "8/7", approxValue: "-", remarks: "" },
+    { id: 5, serialNo: 5, partMark: "PRA-BS2-B168", materialDescription: "BEAM", materialSize: "-", quantity: 1, asslyPartSl: "1/1", approxValue: "-", remarks: "" },
   ]);
 
   const { data: user } = useUser();
@@ -110,50 +164,50 @@ export default function InvoicePage() {
     enabled: !!user,
   });
 
-  const { data: existingInvoice } = useQuery<Invoice>({
-    queryKey: ["/revira/api/invoices", invoiceId],
+  const { data: existingGatePass } = useQuery<GatePass>({
+    queryKey: ["/revira/api/gate-passes", gatePassId],
     queryFn: async () => {
-      if (invoiceId) {
-        const res = await fetch(`/revira/api/invoices/${invoiceId}`, { credentials: "include" });
-        if (!res.ok) throw new Error("Failed to fetch invoice");
+      if (gatePassId) {
+        const res = await fetch(`/revira/api/gate-passes/${gatePassId}`, { credentials: "include" });
+        if (!res.ok) throw new Error("Failed to fetch gate pass");
         return res.json();
       }
-      const res = await fetch(`/revira/api/projects/${projectId}/invoice`, { credentials: "include" });
+      const res = await fetch(`/revira/api/projects/${projectId}/gate-pass`, { credentials: "include" });
       if (!res.ok) {
         if (res.status === 404) return null;
-        throw new Error("Failed to fetch invoice");
+        throw new Error("Failed to fetch gate pass");
       }
       return res.json();
     },
     enabled: !!projectId,
   });
 
-  const { data: existingItems } = useQuery<InvoiceItem[]>({
-    queryKey: ["/revira/api/invoices", existingInvoice?.id, "items"],
+  const { data: existingItems } = useQuery<GatePassItem[]>({
+    queryKey: ["/revira/api/gate-passes", existingGatePass?.id, "items"],
     queryFn: async () => {
-      const res = await fetch(`/revira/api/invoices/${existingInvoice?.id}/items`, { credentials: "include" });
+      const res = await fetch(`/revira/api/gate-passes/${existingGatePass?.id}/items`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch items");
       return res.json();
     },
-    enabled: !!existingInvoice?.id,
+    enabled: !!existingGatePass?.id,
   });
 
-  const { data: invoiceVersions } = useQuery<Invoice[]>({
-    queryKey: ["/revira/api/projects", projectId, "invoice-versions"],
+  const { data: gatePassVersions } = useQuery<GatePass[]>({
+    queryKey: ["/revira/api/projects", projectId, "gate-pass-versions"],
     queryFn: async () => {
-      const res = await fetch(`/revira/api/projects/${projectId}/invoice-versions`, { credentials: "include" });
+      const res = await fetch(`/revira/api/projects/${projectId}/gate-pass-versions`, { credentials: "include" });
       if (!res.ok) return [];
       return res.json();
     },
     enabled: !!projectId,
   });
 
-  const parseInvoiceContentSections = (raw: string | null | undefined): InvoiceContentSectionsData => {
+  const parseGatePassContentSections = (raw: string | null | undefined): GatePassContentSectionsData => {
     if (!raw) return {};
     try {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === "object") {
-        return parsed as InvoiceContentSectionsData;
+        return parsed as GatePassContentSectionsData;
       }
       return {};
     } catch {
@@ -162,78 +216,102 @@ export default function InvoicePage() {
   };
 
   const buildWorkOrderSummary = useCallback(() => {
-    if (invoiceData.orderReferenceType === "po") {
-      return invoiceData.purchaseOrderNo || "-";
+    if (gatePassData.orderReferenceType === "po") {
+      return gatePassData.purchaseOrderNo || "-";
     }
-    return invoiceData.workOrderNo || "-";
-  }, [invoiceData.orderReferenceType, invoiceData.workOrderNo, invoiceData.purchaseOrderNo]);
+    return gatePassData.workOrderNo || "-";
+  }, [gatePassData.orderReferenceType, gatePassData.workOrderNo, gatePassData.purchaseOrderNo]);
 
   const buildDispatchSummary = useCallback(() => {
     const parts: string[] = [];
-    if (invoiceData.vehicleNo.trim()) {
-      parts.push(`Vehicle No.: ${invoiceData.vehicleNo.trim()}`);
+    if (gatePassData.vehicleNo.trim()) {
+      parts.push(`Vehicle No.: ${gatePassData.vehicleNo.trim()}`);
     }
-    if (invoiceData.showDispatchLrNo) {
-      parts.push(`L.R. No.: ${invoiceData.dispatchLrNo || "-"}`);
+    if (gatePassData.showDispatchLrNo) {
+      parts.push(`L.R. No.: ${gatePassData.dispatchLrNo || "-"}`);
     }
-    if (invoiceData.showDispatchPo) {
-      parts.push(`P.O.: ${invoiceData.dispatchPoNo || "-"}`);
+    if (gatePassData.showDispatchPo) {
+      parts.push(`P.O.: ${gatePassData.dispatchPoNo || "-"}`);
     }
-    if (invoiceData.showDispatchGatePass) {
-      parts.push(`Gate Pass: ${invoiceData.dispatchGatePass || "-"}`);
+    if (gatePassData.showDispatchGatePass) {
+      parts.push(`Gate Pass: ${gatePassData.dispatchGatePass || "-"}`);
     }
     return parts.length ? parts.join(" | ") : "-";
   }, [
-    invoiceData.vehicleNo,
-    invoiceData.showDispatchLrNo,
-    invoiceData.dispatchLrNo,
-    invoiceData.showDispatchPo,
-    invoiceData.dispatchPoNo,
-    invoiceData.showDispatchGatePass,
-    invoiceData.dispatchGatePass,
+    gatePassData.vehicleNo,
+    gatePassData.showDispatchLrNo,
+    gatePassData.dispatchLrNo,
+    gatePassData.showDispatchPo,
+    gatePassData.dispatchPoNo,
+    gatePassData.showDispatchGatePass,
+    gatePassData.dispatchGatePass,
   ]);
 
-  const buildInvoiceContentSections = useCallback(() => {
-    const payload: InvoiceContentSectionsData = {
-      invoiceType: invoiceData.invoiceType,
-      orderReferenceType: invoiceData.orderReferenceType,
-      showWorkOrderNo: invoiceData.orderReferenceType === "wo",
-      showPurchaseOrderNo: invoiceData.orderReferenceType === "po",
-      purchaseOrderNo: invoiceData.purchaseOrderNo,
-      vehicleNo: invoiceData.vehicleNo,
-      showDispatchLrNo: invoiceData.showDispatchLrNo,
-      showDispatchPo: invoiceData.showDispatchPo,
-      showDispatchGatePass: invoiceData.showDispatchGatePass,
-      dispatchLrNo: invoiceData.dispatchLrNo,
-      dispatchPoNo: invoiceData.dispatchPoNo,
-      dispatchGatePass: invoiceData.dispatchGatePass,
+  const buildGatePassContentSections = useCallback(() => {
+    const payload: GatePassContentSectionsData = {
+      gatePassType: gatePassData.gatePassType,
+      issueNo: gatePassData.issueNo,
+      issueDate: gatePassData.issueDate,
+      revNo: gatePassData.revNo,
+      revDate: gatePassData.revDate,
+      consigneeName: gatePassData.consigneeName,
+      consigneeAddressText: gatePassData.consigneeAddressText,
+      modeOfTransport: gatePassData.modeOfTransport,
+      vehicleNumber: gatePassData.vehicleNumber,
+      transportVehicle: gatePassData.transportVehicle,
+      contactNo: gatePassData.contactNo,
+      contactPerson: gatePassData.contactPerson,
+      remarkText: gatePassData.remarkText,
+      storeKeeperSignature: gatePassData.storeKeeperSignature,
+      qcEnggSignature: gatePassData.qcEnggSignature,
+      storeInchargeSignature: gatePassData.storeInchargeSignature,
+      plantHeadSignature: gatePassData.plantHeadSignature,
+      orderReferenceType: gatePassData.orderReferenceType,
+      showWorkOrderNo: gatePassData.orderReferenceType === "wo",
+      showPurchaseOrderNo: gatePassData.orderReferenceType === "po",
+      purchaseOrderNo: gatePassData.purchaseOrderNo,
+      vehicleNo: gatePassData.vehicleNo,
+      showDispatchLrNo: gatePassData.showDispatchLrNo,
+      showDispatchPo: gatePassData.showDispatchPo,
+      showDispatchGatePass: gatePassData.showDispatchGatePass,
+      dispatchLrNo: gatePassData.dispatchLrNo,
+      dispatchPoNo: gatePassData.dispatchPoNo,
+      dispatchGatePass: gatePassData.dispatchGatePass,
     };
     return JSON.stringify(payload);
-  }, [invoiceData]);
+  }, [gatePassData]);
 
-  // Set defaults for new invoices
+  // Set defaults for New Gate Pass
   useEffect(() => {
-    if (project && client && !existingInvoice) {
+    if (project && client && !existingGatePass) {
       const date = new Date();
-      const financeYear = date.getMonth() >= 3 
-        ? `${date.getFullYear()}-${(date.getFullYear() + 1).toString().slice(-2)}`
-        : `${date.getFullYear() - 1}-${date.getFullYear().toString().slice(-2)}`;
+      const shortName = getProjectShortName(project.projectName);
+      const docDate = toDocDate(date);
       
-      setInvoiceData(prev => ({
+      setGatePassData(prev => ({
         ...prev,
-        invoiceNumber: `RNS/${financeYear}/RNS-SL-${String(project.id).padStart(3, '0')}`,
-        organisationName: `M/s ${client.name}`,
+        gatePassNumber: `RNS/${shortName}/${docDate}/RNS-GT-002`,
+        issueDate: date.toISOString().split("T")[0],
+        revDate: date.toISOString().split("T")[0],
+        consigneeName: "Company Name",
+        consigneeAddressText: "PLOT NO. D3, MIDC Umred, Girad Mohpa Road, Belgaon Umred Nagpur, Maharashtra-441203",
+        modeOfTransport: "By Road",
+        vehicleNumber: "MH 40 CX 2839",
+        transportVehicle: "By Road - MH 40 CX 2839",
+        contactNo: "7972800638",
+        contactPerson: "SAILESH",
+        organisationName: client.name,
         registeredAddress: client.location,
-        consigneeAddress: `M/s ${client.name}, ${client.location}`,
+        consigneeAddress: `${client.name}\n${client.location}`,
         clientGstin: client.gstNo || "",
       }));
     }
-  }, [project, client, existingInvoice]);
+  }, [project, client, existingGatePass]);
 
-  // Load existing invoice data
+  // Load existing gate pass data
   useEffect(() => {
-    if (existingInvoice) {
-      const parsedContent = parseInvoiceContentSections(existingInvoice.contentSections);
+    if (existingGatePass) {
+      const parsedContent = parseGatePassContentSections(existingGatePass.contentSections);
       const cleanReferenceValue = (value: string | null | undefined) =>
         (value || "").replace(/^W\.O\.\s*No\.\s*:\s*/i, "").replace(/^P\.O\.\s*No\.\s*:\s*/i, "").trim();
       const orderReferenceType =
@@ -247,46 +325,65 @@ export default function InvoicePage() {
         parsedContent.dispatchLrNo !== undefined ||
         parsedContent.dispatchPoNo !== undefined ||
         parsedContent.dispatchGatePass !== undefined;
-      setInvoiceData({
-        invoiceNumber: existingInvoice.invoiceNumber,
-        revision: existingInvoice.revision,
-        invoiceType: parsedContent.invoiceType || "PROFORMA INVOICE",
-        organisationName: existingInvoice.organisationName,
-        registeredAddress: existingInvoice.registeredAddress,
-        consigneeAddress: existingInvoice.consigneeAddress,
-        clientGstin: existingInvoice.clientGstin || "",
-        workOrderNo: cleanReferenceValue(existingInvoice.workOrderNo) || "NIL",
+      const legacyTransport = parsedContent.transportVehicle || existingGatePass.dispatchDetails || "";
+      const transportParts = legacyTransport.includes("-")
+        ? legacyTransport.split("-").map((v) => v.trim())
+        : [];
+      setGatePassData({
+        gatePassNumber: existingGatePass.gatePassNumber,
+        revision: existingGatePass.revision,
+        gatePassType: parsedContent.gatePassType || "GATE PASS",
+        issueNo: parsedContent.issueNo || "001",
+        issueDate: parsedContent.issueDate || "",
+        revNo: parsedContent.revNo || "00",
+        revDate: parsedContent.revDate || "",
+        consigneeName: parsedContent.consigneeName || existingGatePass.organisationName || "",
+        consigneeAddressText: parsedContent.consigneeAddressText || existingGatePass.registeredAddress || "",
+        modeOfTransport: parsedContent.modeOfTransport || transportParts[0] || "By Road",
+        vehicleNumber: parsedContent.vehicleNumber || transportParts[1] || "",
+        transportVehicle: parsedContent.transportVehicle || parsedContent.vehicleNo || existingGatePass.dispatchDetails || "",
+        contactNo: parsedContent.contactNo || "",
+        contactPerson: parsedContent.contactPerson || "",
+        remarkText: parsedContent.remarkText || "",
+        storeKeeperSignature: parsedContent.storeKeeperSignature || "",
+        qcEnggSignature: parsedContent.qcEnggSignature || "",
+        storeInchargeSignature: parsedContent.storeInchargeSignature || "",
+        plantHeadSignature: parsedContent.plantHeadSignature || "",
+        organisationName: existingGatePass.organisationName,
+        registeredAddress: existingGatePass.registeredAddress,
+        consigneeAddress: existingGatePass.consigneeAddress,
+        clientGstin: existingGatePass.clientGstin || "",
+        workOrderNo: cleanReferenceValue(existingGatePass.workOrderNo) || "NIL",
         orderReferenceType,
-        purchaseOrderNo: parsedContent.purchaseOrderNo || (orderReferenceType === "po" ? cleanReferenceValue(existingInvoice.workOrderNo) : ""),
-        dispatchDetails: existingInvoice.dispatchDetails || "-",
-        vehicleNo: parsedContent.vehicleNo || (!hasDispatchConfig && existingInvoice.dispatchDetails && existingInvoice.dispatchDetails !== "-" ? existingInvoice.dispatchDetails : ""),
+        purchaseOrderNo: parsedContent.purchaseOrderNo || (orderReferenceType === "po" ? cleanReferenceValue(existingGatePass.workOrderNo) : ""),
+        dispatchDetails: existingGatePass.dispatchDetails || "-",
+        vehicleNo: parsedContent.vehicleNo || (!hasDispatchConfig && existingGatePass.dispatchDetails && existingGatePass.dispatchDetails !== "-" ? existingGatePass.dispatchDetails : ""),
         showDispatchLrNo: parsedContent.showDispatchLrNo ?? false,
         showDispatchPo: parsedContent.showDispatchPo ?? false,
         showDispatchGatePass: parsedContent.showDispatchGatePass ?? false,
         dispatchLrNo: parsedContent.dispatchLrNo || "",
         dispatchPoNo: parsedContent.dispatchPoNo || "",
         dispatchGatePass: parsedContent.dispatchGatePass || "",
-        appliedTaxType: (existingInvoice.appliedTaxType as "cgst_sgst" | "igst") || "igst",
-        cgstRate: existingInvoice.cgstRate || "9",
-        sgstRate: existingInvoice.sgstRate || "9",
-        igstRate: existingInvoice.igstRate || "18",
+        appliedTaxType: (existingGatePass.appliedTaxType as "cgst_sgst" | "igst") || "igst",
+        cgstRate: existingGatePass.cgstRate || "9",
+        sgstRate: existingGatePass.sgstRate || "9",
+        igstRate: existingGatePass.igstRate || "18",
       });
     }
-  }, [existingInvoice]);
+  }, [existingGatePass]);
 
   // Load existing items
   useEffect(() => {
     if (existingItems && existingItems.length > 0) {
-      setLineItems(existingItems.map(item => ({
+      setLineItems(existingItems.map((item, idx) => ({
         id: item.id,
-        serialNo: item.serialNo,
-        description: item.description,
-        hsnCode: item.hsnCode || "940610",
-        quantity: Number(item.quantity) || 1,
-        unit: item.unit || "LS",
-        ratePerUnit: Number(item.ratePerUnit) || 0,
-        percentage: Number(item.percentage) || 0,
-        amount: Number(item.amount) || 0,
+        serialNo: item.serialNo > 0 ? item.serialNo : idx + 1,
+        partMark: item.hsnCode || "",
+        materialDescription: item.description || "",
+        materialSize: item.ratePerUnit && item.ratePerUnit !== "0" ? item.ratePerUnit : "-",
+        quantity: Number(item.quantity) || 0,
+        asslyPartSl: item.unit || "",
+        approxValue: item.amount && item.amount !== "0" ? item.amount : "-",
         remarks: item.remarks || "",
       })));
     }
@@ -294,29 +391,57 @@ export default function InvoicePage() {
 
   // Calculate totals
   const calculateTotals = useCallback(() => {
-    const totalAmount = lineItems.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const totalAmount = lineItems.reduce((sum, item) => {
+      const numeric = Number(String(item.approxValue).replace(/,/g, ""));
+      return sum + (Number.isFinite(numeric) ? numeric : 0);
+    }, 0);
     let cgstAmount = 0;
     let sgstAmount = 0;
     let igstAmount = 0;
 
-    if (invoiceData.appliedTaxType === "cgst_sgst") {
-      cgstAmount = totalAmount * (Number(invoiceData.cgstRate) / 100);
-      sgstAmount = totalAmount * (Number(invoiceData.sgstRate) / 100);
+    if (gatePassData.appliedTaxType === "cgst_sgst") {
+      cgstAmount = totalAmount * (Number(gatePassData.cgstRate) / 100);
+      sgstAmount = totalAmount * (Number(gatePassData.sgstRate) / 100);
     } else {
-      igstAmount = totalAmount * (Number(invoiceData.igstRate) / 100);
+      igstAmount = totalAmount * (Number(gatePassData.igstRate) / 100);
     }
 
     const totalTax = cgstAmount + sgstAmount + igstAmount;
     const grandTotal = totalAmount + totalTax;
 
     return { totalAmount, cgstAmount, sgstAmount, igstAmount, totalTax, grandTotal };
-  }, [lineItems, invoiceData.appliedTaxType, invoiceData.cgstRate, invoiceData.sgstRate, invoiceData.igstRate]);
+  }, [lineItems, gatePassData.appliedTaxType, gatePassData.cgstRate, gatePassData.sgstRate, gatePassData.igstRate]);
 
   const totals = calculateTotals();
 
+  const toDecimalString = (value: string | number, fallback = "0") => {
+    const n = Number(String(value ?? "").replace(/,/g, "").trim());
+    return Number.isFinite(n) ? String(n) : fallback;
+  };
+
+  const toggleBrandingSignature = (
+    field: SignatureField,
+    brandingField: "storeKeeperSignUrl" | "qcEnggSignUrl" | "storeInchargeSignUrl" | "plantHeadSignUrl"
+  ) => {
+    const source = branding?.[brandingField] || "";
+    setGatePassData((prev) => {
+      if (prev[field]) return { ...prev, [field]: "" };
+      if (!source) {
+        toast({
+          title: "No branding signature",
+          description: "Upload this signature image in Branding page first.",
+          variant: "destructive",
+        });
+        return prev;
+      }
+      return { ...prev, [field]: source };
+    });
+  };
+
   const getPersistableLineItems = useCallback(() => {
     return lineItems
-      .filter((item) => item.description.trim());
+      .slice(0, 5)
+      .filter((item) => item.partMark.trim() || item.materialDescription.trim());
   }, [lineItems]);
 
   // Number to words conversion
@@ -362,81 +487,82 @@ export default function InvoicePage() {
     return result;
   };
 
-  const createInvoiceMutation = useMutation({
+  const createGatePassMutation = useMutation({
     mutationFn: async () => {
       const persistableLineItems = getPersistableLineItems();
-      const invoiceRes = await apiRequest("POST", "/revira/api/invoices", {
+      const gatePassRes = await apiRequest("POST", "/revira/api/gate-passes", {
         projectId: Number(projectId),
-        invoiceNumber: invoiceData.invoiceNumber,
-        revision: invoiceData.revision,
-        organisationName: invoiceData.organisationName,
-        registeredAddress: invoiceData.registeredAddress,
-        consigneeAddress: invoiceData.consigneeAddress,
-        clientGstin: invoiceData.clientGstin,
-        workOrderNo: buildWorkOrderSummary(),
-        dispatchDetails: buildDispatchSummary(),
-        appliedTaxType: invoiceData.appliedTaxType,
-        cgstRate: invoiceData.cgstRate,
-        sgstRate: invoiceData.sgstRate,
-        igstRate: invoiceData.igstRate,
-        contentSections: buildInvoiceContentSections(),
+        gatePassNumber: gatePassData.gatePassNumber,
+        revision: gatePassData.revision,
+        organisationName: gatePassData.consigneeName || "Company Name",
+        registeredAddress: gatePassData.consigneeAddressText || "-",
+        consigneeAddress: `${gatePassData.consigneeName || "Company Name"}\n${gatePassData.consigneeAddressText || "-"}`.trim(),
+        clientGstin: gatePassData.clientGstin,
+        workOrderNo: gatePassData.issueNo || "-",
+        dispatchDetails: `${gatePassData.modeOfTransport || "By Road"} - ${gatePassData.vehicleNumber || "-"}`,
+        appliedTaxType: gatePassData.appliedTaxType,
+        cgstRate: gatePassData.cgstRate,
+        sgstRate: gatePassData.sgstRate,
+        igstRate: gatePassData.igstRate,
+        contentSections: buildGatePassContentSections(),
         totalAmount: String(totals.totalAmount),
         totalTax: String(totals.totalTax),
         grandTotal: String(totals.grandTotal),
       });
-      const invoice = await invoiceRes.json();
+      const gatePass = await gatePassRes.json();
       
-      for (const item of persistableLineItems) {
-        await apiRequest("POST", `/revira/api/invoices/${invoice.id}/items`, {
-          serialNo: item.serialNo,
-          description: item.description,
-          hsnCode: item.hsnCode,
-          quantity: String(item.quantity),
-          unit: item.unit,
-          ratePerUnit: String(item.ratePerUnit),
-          percentage: String(item.percentage),
-          amount: String(item.amount),
+      for (let idx = 0; idx < persistableLineItems.length; idx++) {
+        const item = persistableLineItems[idx];
+        await apiRequest("POST", `/revira/api/gate-passes/${gatePass.id}/items`, {
+          serialNo: item.serialNo > 0 ? item.serialNo : idx + 1,
+          description: item.materialDescription,
+          hsnCode: item.partMark,
+          quantity: toDecimalString(item.quantity),
+          unit: item.asslyPartSl,
+          ratePerUnit: toDecimalString(item.materialSize, "0"),
+          percentage: "0",
+          amount: toDecimalString(item.approxValue, "0"),
           remarks: item.remarks,
         });
       }
       
-      return invoice;
+      return gatePass;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/revira/api/invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["/revira/api/projects", projectId, "invoice-versions"] });
-      setLocation(`/revira/projects/${projectId}/invoice/${data.id}`);
+      queryClient.invalidateQueries({ queryKey: ["/revira/api/gate-passes"] });
+      queryClient.invalidateQueries({ queryKey: ["/revira/api/projects", projectId, "gate-pass-versions"] });
+      setLocation(`/revira/projects/${projectId}/gate-pass/${data.id}`);
       toast({
-        title: "Invoice saved",
-        description: "The invoice has been created successfully.",
+        title: "Gate Pass saved",
+        description: "The gate pass has been created successfully.",
       });
     },
     onError: (error: Error) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to create invoice",
+        description: error.message || "Failed to create gate pass",
         variant: "destructive",
       });
     },
   });
 
-  const updateInvoiceMutation = useMutation({
+  const updateGatePassMutation = useMutation({
     mutationFn: async () => {
       const persistableLineItems = getPersistableLineItems();
-      await apiRequest("PUT", `/revira/api/invoices/${existingInvoice?.id}`, {
-        invoiceNumber: invoiceData.invoiceNumber,
-        revision: invoiceData.revision,
-        organisationName: invoiceData.organisationName,
-        registeredAddress: invoiceData.registeredAddress,
-        consigneeAddress: invoiceData.consigneeAddress,
-        clientGstin: invoiceData.clientGstin,
-        workOrderNo: buildWorkOrderSummary(),
-        dispatchDetails: buildDispatchSummary(),
-        appliedTaxType: invoiceData.appliedTaxType,
-        cgstRate: invoiceData.cgstRate,
-        sgstRate: invoiceData.sgstRate,
-        igstRate: invoiceData.igstRate,
-        contentSections: buildInvoiceContentSections(),
+      await apiRequest("PUT", `/revira/api/gate-passes/${existingGatePass?.id}`, {
+        gatePassNumber: gatePassData.gatePassNumber || "RNS/PROJECT/00-00-00/RNS-GT-002",
+        revision: gatePassData.revision,
+        organisationName: gatePassData.consigneeName || "Company Name",
+        registeredAddress: gatePassData.consigneeAddressText || "-",
+        consigneeAddress: `${gatePassData.consigneeName || "Company Name"}\n${gatePassData.consigneeAddressText || "-"}`.trim(),
+        clientGstin: gatePassData.clientGstin,
+        workOrderNo: gatePassData.issueNo || "-",
+        dispatchDetails: `${gatePassData.modeOfTransport || "By Road"} - ${gatePassData.vehicleNumber || "-"}`,
+        appliedTaxType: gatePassData.appliedTaxType,
+        cgstRate: gatePassData.cgstRate,
+        sgstRate: gatePassData.sgstRate,
+        igstRate: gatePassData.igstRate,
+        contentSections: buildGatePassContentSections(),
         totalAmount: String(totals.totalAmount),
         totalTax: String(totals.totalTax),
         grandTotal: String(totals.grandTotal),
@@ -444,106 +570,107 @@ export default function InvoicePage() {
 
       let itemsToDelete = existingItems || [];
       if (!itemsToDelete.length) {
-        const res = await fetch(`/revira/api/invoices/${existingInvoice?.id}/items`, { credentials: "include" });
+        const res = await fetch(`/revira/api/gate-passes/${existingGatePass?.id}/items`, { credentials: "include" });
         if (res.ok) {
           itemsToDelete = await res.json();
         }
       }
 
       for (const item of itemsToDelete) {
-        await apiRequest("DELETE", `/revira/api/invoice-items/${item.id}`);
+        await apiRequest("DELETE", `/revira/api/gate-pass-items/${item.id}`);
       }
 
-      for (const item of persistableLineItems) {
-        await apiRequest("POST", `/revira/api/invoices/${existingInvoice?.id}/items`, {
-          serialNo: item.serialNo,
-          description: item.description,
-          hsnCode: item.hsnCode,
-          quantity: String(item.quantity),
-          unit: item.unit,
-          ratePerUnit: String(item.ratePerUnit),
-          percentage: String(item.percentage),
-          amount: String(item.amount),
+      for (let idx = 0; idx < persistableLineItems.length; idx++) {
+        const item = persistableLineItems[idx];
+        await apiRequest("POST", `/revira/api/gate-passes/${existingGatePass?.id}/items`, {
+          serialNo: item.serialNo > 0 ? item.serialNo : idx + 1,
+          description: item.materialDescription,
+          hsnCode: item.partMark,
+          quantity: toDecimalString(item.quantity),
+          unit: item.asslyPartSl,
+          ratePerUnit: toDecimalString(item.materialSize, "0"),
+          percentage: "0",
+          amount: toDecimalString(item.approxValue, "0"),
           remarks: item.remarks,
         });
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/revira/api/invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["/revira/api/invoices", existingInvoice?.id, "items"] });
-      queryClient.invalidateQueries({ queryKey: ["/revira/api/projects", projectId, "invoice-versions"] });
+      queryClient.invalidateQueries({ queryKey: ["/revira/api/gate-passes"] });
+      queryClient.invalidateQueries({ queryKey: ["/revira/api/gate-passes", existingGatePass?.id, "items"] });
+      queryClient.invalidateQueries({ queryKey: ["/revira/api/projects", projectId, "gate-pass-versions"] });
       toast({
-        title: "Invoice updated",
-        description: "The invoice has been updated successfully.",
+        title: "Gate Pass updated",
+        description: "The gate pass has been updated successfully.",
       });
     },
     onError: (error: Error) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to update invoice",
+        description: error.message || "Failed to update gate pass",
         variant: "destructive",
       });
     },
   });
 
-  const duplicateInvoiceMutation = useMutation({
+  const duplicateGatePassMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", `/revira/api/invoices/${existingInvoice?.id}/duplicate`, {});
+      const res = await apiRequest("POST", `/revira/api/gate-passes/${existingGatePass?.id}/duplicate`, {});
       return res.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/revira/api/projects", projectId, "invoice-versions"] });
-      setLocation(`/revira/projects/${projectId}/invoice/${data.id}`);
+      queryClient.invalidateQueries({ queryKey: ["/revira/api/projects", projectId, "gate-pass-versions"] });
+      setLocation(`/revira/projects/${projectId}/gate-pass/${data.id}`);
       toast({
-        title: "Invoice duplicated",
+        title: "Gate Pass duplicated",
         description: `Created new version: ${data.revision}`,
       });
     },
     onError: (error: Error) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to duplicate invoice",
+        description: error.message || "Failed to duplicate gate pass",
         variant: "destructive",
       });
     },
   });
 
-  const deleteInvoiceMutation = useMutation({
+  const deleteGatePassMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/revira/api/invoices/${id}`, undefined);
+      await apiRequest("DELETE", `/revira/api/gate-passes/${id}`, undefined);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/revira/api/projects", projectId, "invoice-versions"] });
+      queryClient.invalidateQueries({ queryKey: ["/revira/api/projects", projectId, "gate-pass-versions"] });
       toast({
-        title: "Invoice deleted",
-        description: "The invoice version has been deleted.",
+        title: "Gate Pass deleted",
+        description: "The gate pass version has been deleted.",
       });
       setVersionsDialogOpen(false);
-      if (invoiceVersions && invoiceVersions.length > 1) {
-        const remaining = invoiceVersions.filter(v => v.id !== existingInvoice?.id);
+      if (gatePassVersions && gatePassVersions.length > 1) {
+        const remaining = gatePassVersions.filter(v => v.id !== existingGatePass?.id);
         if (remaining.length > 0) {
-          setLocation(`/revira/projects/${projectId}/invoice/${remaining[0].id}`);
+          setLocation(`/revira/projects/${projectId}/gate-pass/${remaining[0].id}`);
         } else {
-          setLocation(`/revira/projects/${projectId}/invoice`);
+          setLocation(`/revira/projects/${projectId}/gate-pass`);
         }
       } else {
-        setLocation(`/revira/projects/${projectId}/invoice`);
+        setLocation(`/revira/projects/${projectId}/gate-pass`);
       }
     },
     onError: (error: Error) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to delete invoice",
+        description: error.message || "Failed to delete gate pass",
         variant: "destructive",
       });
     },
   });
 
-  const handleSave = () => {
-    if (existingInvoice) {
-      updateInvoiceMutation.mutate();
+  const handleSaveGatePass = () => {
+    if (existingGatePass) {
+      updateGatePassMutation.mutate();
     } else {
-      createInvoiceMutation.mutate();
+      createGatePassMutation.mutate();
     }
   };
 
@@ -552,13 +679,12 @@ export default function InvoicePage() {
     setLineItems([...lineItems, {
       id: newId,
       serialNo: lineItems.length + 1,
-      description: "",
-      hsnCode: "940610",
-      quantity: 1,
-      unit: "LS",
-      ratePerUnit: 0,
-      percentage: 0,
-      amount: 0,
+      partMark: "",
+      materialDescription: "",
+      materialSize: "-",
+      quantity: 0,
+      asslyPartSl: "",
+      approxValue: "-",
       remarks: "",
     }]);
   };
@@ -570,14 +696,10 @@ export default function InvoicePage() {
     }
   };
 
-  const updateLineItem = (id: number, field: keyof InvoiceLineItem, value: string | number) => {
+  const updateLineItem = (id: number, field: keyof GatePassLineItem, value: string | number) => {
     setLineItems(prev => prev.map(item => {
       if (item.id === id) {
-        const updated = { ...item, [field]: value };
-        if (field === "quantity" || field === "ratePerUnit") {
-          updated.amount = Number(updated.quantity) * Number(updated.ratePerUnit);
-        }
-        return updated;
+        return { ...item, [field]: value };
       }
       return item;
     }));
@@ -588,6 +710,13 @@ export default function InvoicePage() {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`;
+  };
+
+  const getApproxValueTotal = () => {
+    return lineItems.reduce((sum, item) => {
+      const numeric = Number(String(item.approxValue || "").replace(/,/g, "").trim());
+      return sum + (Number.isFinite(numeric) ? numeric : 0);
+    }, 0);
   };
 
   const exportToPDF = async () => {
@@ -693,7 +822,7 @@ export default function InvoicePage() {
         pairRows: Array<[[string, string], [string, string]?]>,
         trailingMergedRows: Array<[string, string]> = []
       ) => {
-        const colWidths = [32, 63, 32, 63];
+        const colWidths = [38, 57, 38, 57];
         const baseRowHeight = 5.8;
         const padding = cellInnerPad;
         const tableCellTopPad = pxToMm(3);
@@ -921,77 +1050,50 @@ export default function InvoicePage() {
         currentY = rowY;
       };
 
-      const invoiceTitle = invoiceData.invoiceType || "PROFORMA INVOICE";
-      const invoiceNumberLabel = invoiceTitle === "TAX INVOICE" ? "T.I. No" : "P.I No";
-      const invoiceTypeCode = invoiceTitle === "TAX INVOICE" ? "TI" : "PI";
-      const now = new Date();
-      const invoiceFinanceYear =
-        now.getMonth() >= 3
-          ? `${now.getFullYear()}-${String(now.getFullYear() + 1).slice(-2)}`
-          : `${now.getFullYear() - 1}-${String(now.getFullYear()).slice(-2)}`;
-      const invoiceSequence = String(project?.id || 0).padStart(3, "0");
-      const invoiceNumberForPdf = `RNS/${invoiceFinanceYear}/RNS-${invoiceTypeCode}-${invoiceSequence}`;
-      const clientDetailEntries: Array<[string, string]> = [["GSTIN", invoiceData.clientGstin || ""]];
-      const dispatchEntries: string[] = [];
-      if (invoiceData.orderReferenceType === "po") {
-        clientDetailEntries.push(["P.O. No.", invoiceData.purchaseOrderNo || "-"]);
-      } else {
-        clientDetailEntries.push(["W.O. No.", invoiceData.workOrderNo || "-"]);
-      }
-      if (invoiceData.vehicleNo.trim()) dispatchEntries.push(`Vehicle No. - ${invoiceData.vehicleNo.trim()}`);
-      if (invoiceData.showDispatchLrNo) dispatchEntries.push(`L.R. No. - ${invoiceData.dispatchLrNo || "-"}`);
-      if (invoiceData.showDispatchPo) dispatchEntries.push(`D.C No. - ${invoiceData.dispatchPoNo || "-"}`);
-      if (invoiceData.showDispatchGatePass) dispatchEntries.push(`Gate Pass - ${invoiceData.dispatchGatePass || "-"}`);
-      const dispatchDetailsLine = dispatchEntries.length ? dispatchEntries.join(",    ") : "-";
-      const clientPairRows: Array<[[string, string], [string, string]?]> = [];
-      for (let i = 0; i < clientDetailEntries.length; i += 2) {
-        clientPairRows.push([clientDetailEntries[i], clientDetailEntries[i + 1]]);
-      }
+      const gatePassTitle = "NON-RETURNABLE GATE PASS";
+      const issueDateText = gatePassData.issueDate
+        ? new Date(gatePassData.issueDate).toLocaleDateString("en-GB")
+        : new Date().toLocaleDateString("en-GB");
+      const revDateText = gatePassData.revDate
+        ? new Date(gatePassData.revDate).toLocaleDateString("en-GB")
+        : new Date().toLocaleDateString("en-GB");
 
       addHeaderFooterStamp(currentPage);
 
       pdf.setFontSize(16);
       pdf.setFont("helvetica", "bold");
       pdf.setTextColor("#da2032");
-      pdf.text(invoiceTitle, pageWidth / 2, currentY, { align: "center" });
-      currentY += 10;
-
-      pdf.setFont("helvetica", "normal");
-      pdf.setTextColor(0, 0, 0);
-      pdf.setFontSize(9);
-      pdf.text(`CIN: ${branding?.cin || ""}`, margin, currentY);
-      pdf.text(`Company GSTIN: ${branding?.companyGstin || "07AAPCR3026H1ZA"}`, pageWidth / 2 - 20, currentY);
-      pdf.text(`${invoiceNumberLabel}: ${invoiceNumberForPdf}`, pageWidth - margin - 50, currentY);
-      currentY += 5;
-      pdf.text(`Email: ${branding?.email || "sales@reviranexgen.com"}`, pageWidth / 2 - 20, currentY);
-      pdf.text(`Date: ${new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`, pageWidth - margin - 50, currentY);
+      pdf.text(gatePassTitle, pageWidth / 2, currentY, { align: "center" });
       currentY += 8;
 
-      addSectionTitle("Client Details", 11);
+      addSectionTitle("Gate Pass Details", 11);
       addFourColumnClientTable(
         [
-          ["Organisation Name", invoiceData.organisationName],
-          ["Registered Address", invoiceData.registeredAddress],
-          ["Consignee Address", invoiceData.consigneeAddress],
+          ["Doc. No", gatePassData.gatePassNumber || "RNS/PROJECT/00-00-00/RNS-GT-002"],
+          ["Date", issueDateText || "-"],
+          ["CONSIGNEE NAME", gatePassData.consigneeName || "Company Name"],
+          ["CONSIGNEE ADDRESS", gatePassData.consigneeAddressText || "PLOT NO. D3, MIDC Umred, Girad Mohpa Road, Belgaon Umred Nagpur, Maharashtra-441203"],
+          ["Mode of transport", gatePassData.modeOfTransport || "By Road"],
+          ["Vehicle No.", gatePassData.vehicleNumber || "MH 40 CX 2839"],
+          ["Contact No.", gatePassData.contactNo || "7972800638"],
+          ["Contact person", gatePassData.contactPerson || "SAILESH"],
         ],
-        clientPairRows,
-        [["Dispatch Details", dispatchDetailsLine]]
+        []
       );
       currentY += blockGap;
 
-      const tableHeaders = ["Sr.No.", "Description of Goods", "HSN Code", "Qty.", "Unit", "Rate", "%age", "Basic Amount (INR)"];
-      const colWidths = [12, 55, 20, 13, 13, 20, 14, 43];
+      const tableHeaders = ["SR. NO.", "PARTMARK", "MATERIAL DISCRIPTION", "MATERIAL SIZE", "QUANTITY", "ASSLY PART SL", "APPROX. VALUE"];
+      const colWidths = [14, 25, 40, 29, 20, 24, 28];
       const tableRows = lineItems
-        .filter((item) => item.description.trim())
+        .filter((item) => item.partMark.trim() || item.materialDescription.trim())
         .map((item) => [
-          String(item.serialNo),
-          item.description,
-          item.hsnCode,
+          item.serialNo ? String(item.serialNo) : "",
+          item.partMark,
+          item.materialDescription,
+          item.materialSize,
           String(item.quantity),
-          item.unit || "LS",
-          formatAmountValue(Number(item.ratePerUnit) || 0),
-          `${Number(item.percentage) || 0}%`,
-          formatAmountValue(Number(item.amount) || 0),
+          item.asslyPartSl,
+          item.approxValue,
         ]);
 
       checkNewPage(15);
@@ -1041,47 +1143,104 @@ export default function InvoicePage() {
         currentY += rowHeight;
       });
 
+      const totalQty = lineItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+      const totalApproxValue = getApproxValueTotal();
+      const totalRow = ["", "", "TOTAL", "", String(totalQty), "", totalApproxValue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })];
+      const totalCells = totalRow.map((cell, i) => pdf.splitTextToSize(cell, colWidths[i] - cellInnerPad * 2));
+      const totalMaxLines = Math.max(...totalCells.map((lines) => lines.length));
+      const totalRowHeight = Math.max(5.8, totalMaxLines * 3.2 + 1.2);
+      checkNewPage(totalRowHeight + 2);
+      pdf.setFillColor(245, 245, 245);
+      pdf.rect(margin, currentY - 3.0, contentWidth, totalRowHeight, "F");
+      pdf.setDrawColor(borderColor);
+      pdf.rect(margin, currentY - 3.0, contentWidth, totalRowHeight, "S");
+      let totalX = margin;
+      totalCells.forEach((cellLines, i) => {
+        pdf.line(totalX, currentY - 3.0, totalX, currentY - 3.0 + totalRowHeight);
+        pdf.setFont("helvetica", i === 2 || i === 4 || i === 5 || i === 6 ? "bold" : "normal");
+        cellLines.forEach((line: string, lineIdx: number) => {
+          pdf.text(line, totalX + cellInnerPad, currentY + 0.1 + cellTopPad + lineIdx * 3.2);
+        });
+        totalX += colWidths[i];
+      });
+      pdf.line(totalX, currentY - 3.0, totalX, currentY - 3.0 + totalRowHeight);
+      currentY += totalRowHeight;
+
       currentY += blockGap;
-      const summaryRows = [
-        { detail: "Total Amount (INR)", value: formatAmountWithRupee(totals.totalAmount) },
-        { detail: "Total Amount before Tax", value: formatAmountWithRupee(totals.totalAmount) },
-        { detail: "(1) Add: CGST", value: formatAmountWithRupee(totals.cgstAmount) },
-        { detail: "(2) Add: SGST", value: formatAmountWithRupee(totals.sgstAmount) },
-        { detail: "(3) Add: IGST", value: formatAmountWithRupee(totals.igstAmount) },
-        { detail: "Total GST", value: formatAmountWithRupee(totals.totalTax) },
-        { detail: "Grand Total", value: formatAmountWithRupee(totals.grandTotal) },
+      addSectionTitle("Remark", 11);
+      const remarkHeight = 18;
+      checkNewPage(remarkHeight + 5);
+      pdf.setDrawColor(borderColor);
+      pdf.rect(margin, currentY - 3.0, contentWidth, remarkHeight, "S");
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(9);
+      const remarkLines = pdf.splitTextToSize(gatePassData.remarkText || "-", contentWidth - 2 * cellInnerPad);
+      remarkLines.forEach((line: string, idx: number) => {
+        pdf.text(line, margin + cellInnerPad, currentY + 0.1 + cellTopPad + idx * 3.2);
+      });
+      currentY += remarkHeight + blockGap;
+
+      addSectionTitle("Signature", 11);
+      const signatures: Array<{ label: string; data: string }> = [
+        { label: "Store Keeper", data: gatePassData.storeKeeperSignature },
+        { label: "Qc Engg.", data: gatePassData.qcEnggSignature },
+        { label: "Store Incharge", data: gatePassData.storeInchargeSignature },
+        { label: "Plant Head", data: gatePassData.plantHeadSignature },
       ];
-      addThreeColumnSummaryTable(numberToWords(totals.grandTotal), summaryRows);
+      const signGap = 3;
+      const signBoxHeight = 22;
+      const signBoxWidth = (contentWidth - signGap * 3) / 4;
+      checkNewPage(signBoxHeight + 12);
+      signatures.forEach((sig, idx) => {
+        const x = margin + idx * (signBoxWidth + signGap);
+        pdf.rect(x, currentY - 3.0, signBoxWidth, signBoxHeight, "S");
+        if (sig.data) {
+          try {
+            const imgProps = pdf.getImageProperties(sig.data);
+            const naturalW = imgProps.width || 1;
+            const naturalH = imgProps.height || 1;
+            const targetW = signBoxWidth - 2;
+            const targetH = signBoxHeight - 7;
+            const imgRatio = naturalW / naturalH;
+            const boxRatio = targetW / targetH;
 
-      currentY += blockGap;
-      addSectionTitle("Bank Details", 11);
-      addFourColumnPairsTable([
-        [["Account Name", branding?.entityName || "Revira NexGen Structures Pvt. Ltd"], ["Account Number", "73361900002657"]],
-        [["Address", branding?.headOfficeAddress || "28, E2 Block, Shivram Park Nangloi Delhi - 110041"], ["IFSC Code", "YESB0000733"]],
-      ]);
+            let drawW = targetW;
+            let drawH = targetH;
+            if (imgRatio > boxRatio) {
+              drawH = targetW / imgRatio;
+            } else {
+              drawW = targetH * imgRatio;
+            }
 
-      currentY += blockGap;
-      checkNewPage(20);
-      pdf.text(`For, ${branding?.entityName || "Revira NexGen Structures Pvt. Ltd"}`, pageWidth - margin - 60, currentY);
-      currentY += 18;
-      pdf.text("Authorised Signatory", pageWidth - margin - 50, currentY);
+            const drawX = x + 1 + (targetW - drawW) / 2;
+            const drawY = currentY - 2.2 + (targetH - drawH) / 2;
+            pdf.addImage(sig.data, "PNG", drawX, drawY, drawW, drawH);
+          } catch {
+            // ignore bad image
+          }
+        }
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(8);
+        pdf.text(sig.label, x + signBoxWidth / 2, currentY + signBoxHeight - 1.2, { align: "center" });
+      });
+      currentY += signBoxHeight;
 
       const date = new Date();
       const dateStr = `${String(date.getDate()).padStart(2, "0")}${String(date.getMonth() + 1).padStart(2, "0")}${date.getFullYear()}`;
       const companyShort = (branding?.entityName || "RNS").split(" ").map((w) => w[0]).join("");
-      const titlePrefix = invoiceTitle === "TAX INVOICE" ? "TAX_INVOICE" : "PROFORMA_INVOICE";
-      const fileName = `${titlePrefix}_${dateStr}_${companyShort}_${invoiceData.revision}.pdf`;
+      const titlePrefix = "GATE_PASS";
+      const fileName = `${titlePrefix}_${dateStr}_${companyShort}_${gatePassData.revision}.pdf`;
 
       pdf.save(fileName);
       toast({
         title: "PDF exported",
-        description: `Invoice saved as ${fileName}`,
+        description: `Gate Pass saved as ${fileName}`,
       });
     } catch (error) {
       console.error("PDF export error:", error);
       toast({
         title: "Export failed",
-        description: "Failed to export invoice PDF. Please try again.",
+        description: "Failed to export gate pass PDF. Please try again.",
         variant: "destructive",
       });
     }
@@ -1122,10 +1281,11 @@ export default function InvoicePage() {
           
           <Button
             className="bg-[#d92134] hover:bg-[#b51c2c]"
-            data-testid="button-new-invoice"
+            onClick={() => setLocation(`/revira/projects/${projectId}/gate-pass`)}
+            data-testid="button-new-gate-pass"
           >
             <FileText className="w-4 h-4 mr-2" />
-            New Invoice
+            New Gate Pass
           </Button>
         </div>
 
@@ -1138,7 +1298,7 @@ export default function InvoicePage() {
           >
             <span className="text-white font-medium">Versions</span>
             <div className="flex items-center justify-center px-3 h-8 bg-white text-[#d92134] rounded font-bold">
-              {existingInvoice?.revision || invoiceData.revision || 'R-001'}
+              {existingGatePass?.revision || gatePassData.revision || 'R-001'}
             </div>
           </div>
           
@@ -1153,14 +1313,14 @@ export default function InvoicePage() {
               <Eye className="h-4 w-4" />
             </Button>
             
-            {existingInvoice && (
+            {existingGatePass && (
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => duplicateInvoiceMutation.mutate()}
-                disabled={duplicateInvoiceMutation.isPending}
+                onClick={() => duplicateGatePassMutation.mutate()}
+                disabled={duplicateGatePassMutation.isPending}
                 className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-                data-testid="button-duplicate"
+                data-testid="button-duplicate-gate-pass"
               >
                 <Copy className="w-4 h-4" />
               </Button>
@@ -1177,28 +1337,28 @@ export default function InvoicePage() {
             
             <Button
               variant="outline"
-              onClick={handleSave}
-              disabled={createInvoiceMutation.isPending || updateInvoiceMutation.isPending}
+              onClick={handleSaveGatePass}
+              disabled={createGatePassMutation.isPending || updateGatePassMutation.isPending}
               className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-              data-testid="button-save-invoice"
+              data-testid="button-save-gate-pass"
             >
               <Save className="w-4 h-4 mr-2" />
-              {createInvoiceMutation.isPending || updateInvoiceMutation.isPending 
+              {createGatePassMutation.isPending || updateGatePassMutation.isPending 
                 ? "Saving..." 
                 : "Save Changes"}
             </Button>
             
-            {existingInvoice && invoiceVersions && invoiceVersions.length > 1 && (
+            {existingGatePass && gatePassVersions && gatePassVersions.length > 1 && (
               <Button 
                 variant="outline" 
                 size="icon" 
                 className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-red-200"
                 onClick={async () => {
-                  if (confirm(`Are you sure you want to delete this invoice (${existingInvoice.revision})?`)) {
-                    deleteInvoiceMutation.mutate(existingInvoice.id);
+                  if (confirm(`Are you sure you want to delete this gate pass (${existingGatePass.revision})?`)) {
+                    deleteGatePassMutation.mutate(existingGatePass.id);
                   }
                 }}
-                data-testid="button-delete-invoice"
+                data-testid="button-delete-gate-pass"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -1206,194 +1366,86 @@ export default function InvoicePage() {
           </div>
         </div>
 
-        {/* Invoice Content */}
+        {/* Gate Pass Content */}
         <div className="space-y-6">
-        {/* Invoice Header Info */}
         <Card>
           <CardHeader className="bg-slate-100">
             <CardTitle className="text-lg text-slate-700 flex items-center gap-2">
               <FileText className="w-5 h-5" />
-              INVOICE DETAILS
+              GATE PASS DETAILS
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="text-sm text-slate-500">Invoice Type</label>
-              <Select
-                value={invoiceData.invoiceType}
-                onValueChange={(value) => setInvoiceData({ ...invoiceData, invoiceType: value as InvoiceType })}
-              >
-                <SelectTrigger data-testid="select-invoice-type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PROFORMA INVOICE">PROFORMA INVOICE</SelectItem>
-                  <SelectItem value="TAX INVOICE">TAX INVOICE</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm text-slate-500">Invoice No.</label>
-              <Input
-                value={invoiceData.invoiceNumber}
-                onChange={(e) => setInvoiceData({ ...invoiceData, invoiceNumber: e.target.value })}
-                data-testid="input-invoice-number"
-              />
-            </div>
-            <div>
-              <label className="text-sm text-slate-500">Date</label>
-              <Input
-                value={new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                disabled
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Client Details */}
-        <Card>
-          <CardHeader className="bg-slate-100">
-            <CardTitle className="text-lg text-slate-700">CLIENT DETAILS</CardTitle>
-          </CardHeader>
           <CardContent className="p-6 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-sm text-slate-500">Organisation Name</label>
+                <label className="text-sm text-slate-500">Doc. No</label>
                 <Input
-                  value={invoiceData.organisationName}
-                  onChange={(e) => setInvoiceData({ ...invoiceData, organisationName: e.target.value })}
-                  data-testid="input-organisation-name"
+                  value={gatePassData.gatePassNumber}
+                  onChange={(e) => setGatePassData({ ...gatePassData, gatePassNumber: e.target.value })}
+                  data-testid="input-doc-no"
                 />
               </div>
               <div>
-                <label className="text-sm text-slate-500">Client GSTIN</label>
+                <label className="text-sm text-slate-500">Date</label>
                 <Input
-                  value={invoiceData.clientGstin}
-                  onChange={(e) => setInvoiceData({ ...invoiceData, clientGstin: e.target.value })}
-                  data-testid="input-client-gstin"
+                  type="date"
+                  value={gatePassData.issueDate}
+                  onChange={(e) => setGatePassData({ ...gatePassData, issueDate: e.target.value })}
+                  data-testid="input-date"
                 />
               </div>
             </div>
             <div>
-              <label className="text-sm text-slate-500">Registered Address</label>
+              <label className="text-sm text-slate-500">CONSIGNEE NAME</label>
               <Input
-                value={invoiceData.registeredAddress}
-                onChange={(e) => setInvoiceData({ ...invoiceData, registeredAddress: e.target.value })}
-                data-testid="input-registered-address"
+                value={gatePassData.consigneeName}
+                onChange={(e) => setGatePassData({ ...gatePassData, consigneeName: e.target.value })}
+                data-testid="input-consignee-name"
               />
             </div>
             <div>
-              <label className="text-sm text-slate-500">Consignee Address</label>
+              <label className="text-sm text-slate-500">CONSIGNEE ADDRESS</label>
               <Textarea
-                value={invoiceData.consigneeAddress}
-                onChange={(e) => setInvoiceData({ ...invoiceData, consigneeAddress: e.target.value })}
-                rows={2}
+                value={gatePassData.consigneeAddressText}
+                onChange={(e) => setGatePassData({ ...gatePassData, consigneeAddressText: e.target.value })}
+                rows={3}
                 data-testid="input-consignee-address"
               />
             </div>
-            <div className="space-y-3 border rounded-md p-3">
-              <label className="text-sm font-medium text-slate-600">Order Reference Selection</label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-slate-500">Reference Type</label>
-                  <Select
-                    value={invoiceData.orderReferenceType}
-                    onValueChange={(value) => setInvoiceData({ ...invoiceData, orderReferenceType: value as "wo" | "po" })}
-                  >
-                    <SelectTrigger data-testid="select-order-reference-type">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="wo">W.O. No.</SelectItem>
-                      <SelectItem value="po">P.O. No.</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-sm text-slate-500">{invoiceData.orderReferenceType === "po" ? "P.O. No." : "W.O. No."}</label>
-                  <Input
-                    value={invoiceData.orderReferenceType === "po" ? invoiceData.purchaseOrderNo : invoiceData.workOrderNo}
-                    onChange={(e) =>
-                      setInvoiceData({
-                        ...invoiceData,
-                        ...(invoiceData.orderReferenceType === "po"
-                          ? { purchaseOrderNo: e.target.value }
-                          : { workOrderNo: e.target.value }),
-                      })
-                    }
-                    data-testid={invoiceData.orderReferenceType === "po" ? "input-po-number" : "input-work-order"}
-                  />
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm text-slate-500">Mode of transport</label>
+                <Input
+                  value={gatePassData.modeOfTransport}
+                  onChange={(e) => setGatePassData({ ...gatePassData, modeOfTransport: e.target.value })}
+                  data-testid="input-mode-of-transport"
+                />
               </div>
-            </div>
-
-            <div className="space-y-3 border rounded-md p-3">
-              <label className="text-sm font-medium text-slate-600">Dispatch Details</label>
               <div>
                 <label className="text-sm text-slate-500">Vehicle No.</label>
                 <Input
-                  value={invoiceData.vehicleNo}
-                  onChange={(e) => setInvoiceData({ ...invoiceData, vehicleNo: e.target.value })}
-                  data-testid="input-vehicle-no"
+                  value={gatePassData.vehicleNumber}
+                  onChange={(e) => setGatePassData({ ...gatePassData, vehicleNumber: e.target.value })}
+                  data-testid="input-vehicle-number"
                 />
               </div>
-              <div className="flex flex-wrap items-center gap-6">
-                <label className="flex items-center gap-2 text-sm text-slate-600">
-                  <Checkbox
-                    checked={invoiceData.showDispatchLrNo}
-                    onCheckedChange={(checked) => setInvoiceData({ ...invoiceData, showDispatchLrNo: checked === true })}
-                    data-testid="checkbox-dispatch-lr"
-                  />
-                  L.R. No.
-                </label>
-                <label className="flex items-center gap-2 text-sm text-slate-600">
-                  <Checkbox
-                    checked={invoiceData.showDispatchPo}
-                    onCheckedChange={(checked) => setInvoiceData({ ...invoiceData, showDispatchPo: checked === true })}
-                    data-testid="checkbox-dispatch-po"
-                  />
-                  D.C No.
-                </label>
-                <label className="flex items-center gap-2 text-sm text-slate-600">
-                  <Checkbox
-                    checked={invoiceData.showDispatchGatePass}
-                    onCheckedChange={(checked) => setInvoiceData({ ...invoiceData, showDispatchGatePass: checked === true })}
-                    data-testid="checkbox-dispatch-gate-pass"
-                  />
-                  Gate Pass
-                </label>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm text-slate-500">Contact No.</label>
+                <Input
+                  value={gatePassData.contactNo}
+                  onChange={(e) => setGatePassData({ ...gatePassData, contactNo: e.target.value })}
+                  data-testid="input-contact-no"
+                />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {invoiceData.showDispatchLrNo && (
-                  <div>
-                    <label className="text-sm text-slate-500">L.R. No.</label>
-                    <Input
-                      value={invoiceData.dispatchLrNo}
-                      onChange={(e) => setInvoiceData({ ...invoiceData, dispatchLrNo: e.target.value })}
-                      data-testid="input-dispatch-lr"
-                    />
-                  </div>
-                )}
-                {invoiceData.showDispatchPo && (
-                  <div>
-                    <label className="text-sm text-slate-500">D.C No.</label>
-                    <Input
-                      value={invoiceData.dispatchPoNo}
-                      onChange={(e) => setInvoiceData({ ...invoiceData, dispatchPoNo: e.target.value })}
-                      data-testid="input-dispatch-po"
-                    />
-                  </div>
-                )}
-                {invoiceData.showDispatchGatePass && (
-                  <div>
-                    <label className="text-sm text-slate-500">Gate Pass</label>
-                    <Input
-                      value={invoiceData.dispatchGatePass}
-                      onChange={(e) => setInvoiceData({ ...invoiceData, dispatchGatePass: e.target.value })}
-                      data-testid="input-dispatch-gate-pass"
-                    />
-                  </div>
-                )}
+              <div>
+                <label className="text-sm text-slate-500">Contact Person</label>
+                <Input
+                  value={gatePassData.contactPerson}
+                  onChange={(e) => setGatePassData({ ...gatePassData, contactPerson: e.target.value })}
+                  data-testid="input-contact-person"
+                />
               </div>
             </div>
           </CardContent>
@@ -1402,7 +1454,7 @@ export default function InvoicePage() {
         {/* Line Items Table */}
         <Card>
           <CardHeader className="bg-slate-100 flex flex-row items-center justify-between">
-            <CardTitle className="text-lg text-slate-700">INVOICE ITEMS</CardTitle>
+            <CardTitle className="text-lg text-slate-700">GATE PASS ITEMS</CardTitle>
             <Button size="sm" onClick={addLineItem} data-testid="button-add-item">
               <Plus className="w-4 h-4 mr-1" />
               Add Item
@@ -1413,13 +1465,13 @@ export default function InvoicePage() {
               <table className="w-full">
                 <thead className="bg-slate-50">
                   <tr>
-                    <th className="p-3 text-left text-sm font-medium text-slate-600 w-16">Sr.</th>
-                    <th className="p-3 text-left text-sm font-medium text-slate-600">Description</th>
-                    <th className="p-3 text-left text-sm font-medium text-slate-600 w-24">HSN Code</th>
-                    <th className="p-3 text-left text-sm font-medium text-slate-600 w-20">Qty</th>
-                    <th className="p-3 text-left text-sm font-medium text-slate-600 w-20">Unit</th>
-                    <th className="p-3 text-left text-sm font-medium text-slate-600 w-24">Rate</th>
-                    <th className="p-3 text-left text-sm font-medium text-slate-600 w-28">Amount</th>
+                    <th className="p-3 text-left text-sm font-medium text-slate-600 w-16">SR. NO.</th>
+                    <th className="p-3 text-left text-sm font-medium text-slate-600 w-44">PARTMARK</th>
+                    <th className="p-3 text-left text-sm font-medium text-slate-600 w-48">MATERIAL DISCRIPTION</th>
+                    <th className="p-3 text-left text-sm font-medium text-slate-600 w-24">MATERIAL SIZE</th>
+                    <th className="p-3 text-left text-sm font-medium text-slate-600 w-20">QUANTITY</th>
+                    <th className="p-3 text-left text-sm font-medium text-slate-600 w-28">ASSLY PART SL</th>
+                    <th className="p-3 text-left text-sm font-medium text-slate-600 w-24">APPROX. VALUE</th>
                     <th className="p-3 w-12"></th>
                   </tr>
                 </thead>
@@ -1428,26 +1480,31 @@ export default function InvoicePage() {
                     <tr key={item.id} className="border-t">
                       <td className="p-3">
                         <Input
-                          value={item.serialNo}
-                          onChange={(e) => updateLineItem(item.id, "serialNo", parseInt(e.target.value) || 1)}
+                          value={item.serialNo === 0 ? "" : item.serialNo}
+                          onChange={(e) => updateLineItem(item.id, "serialNo", parseInt(e.target.value) || 0)}
                           className="w-14 text-center"
                           data-testid={`input-serial-${item.id}`}
                         />
                       </td>
                       <td className="p-3">
-                        <Textarea
-                          value={item.description}
-                          onChange={(e) => updateLineItem(item.id, "description", e.target.value)}
-                          rows={2}
-                          placeholder="Description"
-                          data-testid={`input-description-${item.id}`}
+                        <Input
+                          value={item.partMark}
+                          onChange={(e) => updateLineItem(item.id, "partMark", e.target.value)}
+                          data-testid={`input-partmark-${item.id}`}
                         />
                       </td>
                       <td className="p-3">
                         <Input
-                          value={item.hsnCode}
-                          onChange={(e) => updateLineItem(item.id, "hsnCode", e.target.value)}
-                          data-testid={`input-hsn-${item.id}`}
+                          value={item.materialDescription}
+                          onChange={(e) => updateLineItem(item.id, "materialDescription", e.target.value)}
+                          data-testid={`input-material-description-${item.id}`}
+                        />
+                      </td>
+                      <td className="p-3">
+                        <Input
+                          value={item.materialSize}
+                          onChange={(e) => updateLineItem(item.id, "materialSize", e.target.value)}
+                          data-testid={`input-material-size-${item.id}`}
                         />
                       </td>
                       <td className="p-3">
@@ -1460,25 +1517,16 @@ export default function InvoicePage() {
                       </td>
                       <td className="p-3">
                         <Input
-                          value={item.unit}
-                          onChange={(e) => updateLineItem(item.id, "unit", e.target.value)}
-                          data-testid={`input-unit-${item.id}`}
+                          value={item.asslyPartSl}
+                          onChange={(e) => updateLineItem(item.id, "asslyPartSl", e.target.value)}
+                          data-testid={`input-assly-part-sl-${item.id}`}
                         />
                       </td>
                       <td className="p-3">
                         <Input
-                          type="number"
-                          value={item.ratePerUnit}
-                          onChange={(e) => updateLineItem(item.id, "ratePerUnit", parseFloat(e.target.value) || 0)}
-                          data-testid={`input-rate-${item.id}`}
-                        />
-                      </td>
-                      <td className="p-3">
-                        <Input
-                          type="number"
-                          value={item.amount}
-                          onChange={(e) => updateLineItem(item.id, "amount", parseFloat(e.target.value) || 0)}
-                          data-testid={`input-amount-${item.id}`}
+                          value={item.approxValue}
+                          onChange={(e) => updateLineItem(item.id, "approxValue", e.target.value)}
+                          data-testid={`input-approx-value-${item.id}`}
                         />
                       </td>
                       <td className="p-3">
@@ -1495,137 +1543,123 @@ export default function InvoicePage() {
                       </td>
                     </tr>
                   ))}
+                  <tr className="border-t bg-slate-50">
+                    <td className="p-3"></td>
+                    <td className="p-3"></td>
+                    <td className="p-3 font-semibold">TOTAL</td>
+                    <td className="p-3"></td>
+                    <td className="p-3 font-semibold">
+                      {lineItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)}
+                    </td>
+                    <td className="p-3 font-semibold"></td>
+                    <td className="p-3 font-semibold">
+                      {getApproxValueTotal().toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td className="p-3"></td>
+                  </tr>
                 </tbody>
               </table>
             </div>
           </CardContent>
         </Card>
 
-        {/* Tax & Totals */}
         <Card>
           <CardHeader className="bg-slate-100">
-            <CardTitle className="text-lg text-slate-700">TAX & TOTALS</CardTitle>
+            <CardTitle className="text-lg text-slate-700">REMARK</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="grid grid-cols-2 gap-8">
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm text-slate-500">Tax Type</label>
-                  <Select
-                    value={invoiceData.appliedTaxType}
-                    onValueChange={(value) => setInvoiceData({ ...invoiceData, appliedTaxType: value as "cgst_sgst" | "igst" })}
-                  >
-                    <SelectTrigger data-testid="select-tax-type">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="igst">IGST (Interstate)</SelectItem>
-                      <SelectItem value="cgst_sgst">CGST + SGST (Intrastate)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {invoiceData.appliedTaxType === "cgst_sgst" ? (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm text-slate-500">CGST Rate (%)</label>
-                      <Input
-                        type="number"
-                        value={invoiceData.cgstRate}
-                        onChange={(e) => setInvoiceData({ ...invoiceData, cgstRate: e.target.value })}
-                        data-testid="input-cgst-rate"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm text-slate-500">SGST Rate (%)</label>
-                      <Input
-                        type="number"
-                        value={invoiceData.sgstRate}
-                        onChange={(e) => setInvoiceData({ ...invoiceData, sgstRate: e.target.value })}
-                        data-testid="input-sgst-rate"
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <label className="text-sm text-slate-500">IGST Rate (%)</label>
-                    <Input
-                      type="number"
-                      value={invoiceData.igstRate}
-                      onChange={(e) => setInvoiceData({ ...invoiceData, igstRate: e.target.value })}
-                      data-testid="input-igst-rate"
-                    />
-                  </div>
-                )}
-              </div>
+            <Textarea
+              value={gatePassData.remarkText}
+              onChange={(e) => setGatePassData({ ...gatePassData, remarkText: e.target.value })}
+              rows={4}
+              placeholder="Add remark..."
+              data-testid="input-gate-pass-remark"
+            />
+          </CardContent>
+        </Card>
 
-              <div className="space-y-3 bg-slate-50 p-4 rounded-lg">
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Total Amount</span>
-                  <span className="font-medium">{formatCurrency(totals.totalAmount)}</span>
+        <Card>
+          <CardHeader className="bg-slate-100">
+            <CardTitle className="text-lg text-slate-700">SIGNATURE</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-4 gap-4">
+              <div className="border rounded-md p-2">
+                <button
+                  type="button"
+                  className={`w-full h-20 border rounded bg-white overflow-hidden ${gatePassData.storeKeeperSignature ? "ring-2 ring-[#d92134]" : ""}`}
+                  onClick={() => toggleBrandingSignature("storeKeeperSignature", "storeKeeperSignUrl")}
+                  data-testid="signature-store-keeper"
+                >
+                  {gatePassData.storeKeeperSignature ? (
+                    <img src={gatePassData.storeKeeperSignature} alt="Store Keeper Signature" className="w-full h-full object-contain" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs text-slate-400">Click to select</div>
+                  )}
+                </button>
+                <div className="mt-1 flex items-center justify-between">
+                  <span className="text-sm font-medium text-slate-700">Store Keeper</span>
+                  <span className="text-xs text-slate-500">{gatePassData.storeKeeperSignature ? "Selected" : "Not selected"}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Amount before Tax</span>
-                  <span className="font-medium">{formatCurrency(totals.totalAmount)}</span>
+              </div>
+              <div className="border rounded-md p-2">
+                <button
+                  type="button"
+                  className={`w-full h-20 border rounded bg-white overflow-hidden ${gatePassData.qcEnggSignature ? "ring-2 ring-[#d92134]" : ""}`}
+                  onClick={() => toggleBrandingSignature("qcEnggSignature", "qcEnggSignUrl")}
+                  data-testid="signature-qc-engg"
+                >
+                  {gatePassData.qcEnggSignature ? (
+                    <img src={gatePassData.qcEnggSignature} alt="Qc Engg. Signature" className="w-full h-full object-contain" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs text-slate-400">Click to select</div>
+                  )}
+                </button>
+                <div className="mt-1 flex items-center justify-between">
+                  <span className="text-sm font-medium text-slate-700">Qc Engg.</span>
+                  <span className="text-xs text-slate-500">{gatePassData.qcEnggSignature ? "Selected" : "Not selected"}</span>
                 </div>
-                {invoiceData.appliedTaxType === "cgst_sgst" ? (
-                  <>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-500">CGST</span>
-                      <span>{formatCurrency(totals.cgstAmount)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-500">SGST</span>
-                      <span>{formatCurrency(totals.sgstAmount)}</span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">IGST</span>
-                    <span>{formatCurrency(totals.igstAmount)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between border-t pt-2">
-                  <span className="text-slate-600">Total Tax</span>
-                  <span className="font-medium">{formatCurrency(totals.totalTax)}</span>
+              </div>
+              <div className="border rounded-md p-2">
+                <button
+                  type="button"
+                  className={`w-full h-20 border rounded bg-white overflow-hidden ${gatePassData.storeInchargeSignature ? "ring-2 ring-[#d92134]" : ""}`}
+                  onClick={() => toggleBrandingSignature("storeInchargeSignature", "storeInchargeSignUrl")}
+                  data-testid="signature-store-incharge"
+                >
+                  {gatePassData.storeInchargeSignature ? (
+                    <img src={gatePassData.storeInchargeSignature} alt="Store Incharge Signature" className="w-full h-full object-contain" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs text-slate-400">Click to select</div>
+                  )}
+                </button>
+                <div className="mt-1 flex items-center justify-between">
+                  <span className="text-sm font-medium text-slate-700">Store Incharge</span>
+                  <span className="text-xs text-slate-500">{gatePassData.storeInchargeSignature ? "Selected" : "Not selected"}</span>
                 </div>
-                <div className="flex justify-between border-t pt-2 text-lg">
-                  <span className="font-bold text-slate-700">Grand Total</span>
-                  <span className="font-bold text-blue-600">{formatCurrency(totals.grandTotal)}</span>
-                </div>
-                <div className="text-sm text-slate-500 mt-2">
-                  {numberToWords(totals.grandTotal)}
+              </div>
+              <div className="border rounded-md p-2">
+                <button
+                  type="button"
+                  className={`w-full h-20 border rounded bg-white overflow-hidden ${gatePassData.plantHeadSignature ? "ring-2 ring-[#d92134]" : ""}`}
+                  onClick={() => toggleBrandingSignature("plantHeadSignature", "plantHeadSignUrl")}
+                  data-testid="signature-plant-head"
+                >
+                  {gatePassData.plantHeadSignature ? (
+                    <img src={gatePassData.plantHeadSignature} alt="Plant Head Signature" className="w-full h-full object-contain" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs text-slate-400">Click to select</div>
+                  )}
+                </button>
+                <div className="mt-1 flex items-center justify-between">
+                  <span className="text-sm font-medium text-slate-700">Plant Head</span>
+                  <span className="text-xs text-slate-500">{gatePassData.plantHeadSignature ? "Selected" : "Not selected"}</span>
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Bank Details */}
-        <Card>
-          <CardHeader className="bg-slate-100">
-            <CardTitle className="text-lg text-slate-700">BANK DETAILS</CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-slate-500">Account Name:</span>
-                <span className="ml-2 font-medium">{branding?.entityName || "Revira NexGen Structures Pvt. Ltd"}</span>
-              </div>
-              <div>
-                <span className="text-slate-500">Account Number:</span>
-                <span className="ml-2 font-medium">073361900002657</span>
-              </div>
-              <div>
-                <span className="text-slate-500">Bank Address:</span>
-                <span className="ml-2 font-medium">{branding?.headOfficeAddress || "28 E2 Block, Shivram Park, Nangloi, Delhi 41"}</span>
-              </div>
-              <div>
-                <span className="text-slate-500">IFSC Code:</span>
-                <span className="ml-2 font-medium">YESB0000733</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
         </div>
       </div>
 
@@ -1633,19 +1667,19 @@ export default function InvoicePage() {
       <Dialog open={versionsDialogOpen} onOpenChange={setVersionsDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Invoice Versions</DialogTitle>
+            <DialogTitle>Gate Pass Versions</DialogTitle>
           </DialogHeader>
           <div className="space-y-2 max-h-[400px] overflow-y-auto">
-            {invoiceVersions?.map((v) => (
+            {gatePassVersions?.map((v) => (
               <div
                 key={v.id}
                 className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                  v.id === existingInvoice?.id
+                  v.id === existingGatePass?.id
                     ? "bg-red-50 border-red-200"
                     : "hover:bg-slate-50"
                 }`}
                 onClick={() => {
-                  setLocation(`/revira/projects/${projectId}/invoice/${v.id}`);
+                  setLocation(`/revira/projects/${projectId}/gate-pass/${v.id}`);
                   setVersionsDialogOpen(false);
                 }}
               >
@@ -1658,7 +1692,7 @@ export default function InvoicePage() {
                       {new Date(v.createdAt).toLocaleDateString()}
                     </p>
                   </div>
-                  {invoiceVersions && invoiceVersions.length > 1 && (
+                  {gatePassVersions && gatePassVersions.length > 1 && (
                     <Button
                       variant="ghost"
                       size="icon"
@@ -1666,7 +1700,7 @@ export default function InvoicePage() {
                       onClick={(e) => {
                         e.stopPropagation();
                         if (confirm(`Are you sure you want to delete version ${v.revision}?`)) {
-                          deleteInvoiceMutation.mutate(v.id);
+                          deleteGatePassMutation.mutate(v.id);
                         }
                       }}
                       data-testid={`button-delete-version-${v.id}`}
@@ -1683,3 +1717,7 @@ export default function InvoicePage() {
     </LayoutShell>
   );
 }
+
+
+
+

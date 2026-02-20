@@ -32,7 +32,13 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const input = api.clients.create.input.parse(req.body);
-      const client = await storage.createClient(input);
+      const client = await storage.createClient({
+        ...input,
+        gstNo: input.gstNo ?? "",
+        contactPerson: input.contactPerson ?? "",
+        mobileNumber: input.mobileNumber ?? "",
+        emailAddress: input.emailAddress ?? "",
+      });
       res.status(201).json(client);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -128,6 +134,82 @@ export async function registerRoutes(
     const deleted = await storage.deleteProject(Number(req.params.id));
     if (!deleted) {
       return res.status(404).json({ message: "Project not found" });
+    }
+    res.status(204).send();
+  });
+
+  // Ledger routes
+  app.get(api.ledger.getBudget.path.replace("/revira",""), async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const budget = await storage.getProjectLedgerBudget(Number(req.params.projectId));
+    res.json(budget || null);
+  });
+
+  app.put(api.ledger.upsertBudget.path.replace("/revira",""), async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const input = api.ledger.upsertBudget.input.parse(req.body);
+      const budget = await storage.upsertProjectLedgerBudget(Number(req.params.projectId), input.projectValue);
+      res.json(budget);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+        });
+      }
+      throw err;
+    }
+  });
+
+  app.get(api.ledger.listEntries.path.replace("/revira",""), async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const entries = await storage.getProjectLedgerEntries(Number(req.params.projectId));
+    res.json(entries);
+  });
+
+  app.post(api.ledger.createEntry.path.replace("/revira",""), async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const input = api.ledger.createEntry.input.parse(req.body);
+      const entry = await storage.createProjectLedgerEntry({
+        ...input,
+        projectId: Number(req.params.projectId),
+      });
+      res.status(201).json(entry);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+        });
+      }
+      throw err;
+    }
+  });
+
+  app.put(api.ledger.updateEntry.path.replace("/revira",""), async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const input = api.ledger.updateEntry.input.parse(req.body);
+      const entry = await storage.updateProjectLedgerEntry(Number(req.params.id), input);
+      if (!entry) {
+        return res.status(404).json({ message: "Ledger entry not found" });
+      }
+      res.json(entry);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+        });
+      }
+      throw err;
+    }
+  });
+
+  app.delete(api.ledger.deleteEntry.path.replace("/revira",""), async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const deleted = await storage.deleteProjectLedgerEntry(Number(req.params.id));
+    if (!deleted) {
+      return res.status(404).json({ message: "Ledger entry not found" });
     }
     res.status(204).send();
   });
@@ -357,10 +439,15 @@ export async function registerRoutes(
         headerUrl: "https://reviranexgen.com/assets/header.jpg",
         footerUrl: "https://reviranexgen.com/assets/footer.jpg",
         stampUrl: "https://reviranexgen.com/assets/stamp.png",
+        storeKeeperSignUrl: "",
+        qcEnggSignUrl: "",
+        storeInchargeSignUrl: "",
+        plantHeadSignUrl: "",
         primaryColor: "#da2032",
         secondaryColor: "#2f3591",
         entityName: "Revira NexGen Structure Pvt. Ltd.",
         cin: "U16222DL2025PTC459465",
+        companyGstin: "07AAPCR3026H1ZA",
         website: "www.reviranexgen.com",
         email: "info@reviranexgen.com",
         headOfficeAddress: "28, E2 Block, Shivram Park Nangloi Delhi - 110041",
@@ -382,10 +469,15 @@ export async function registerRoutes(
           headerUrl: input.headerUrl || "https://reviranexgen.com/assets/header.jpg",
           footerUrl: input.footerUrl || "https://reviranexgen.com/assets/footer.jpg",
           stampUrl: input.stampUrl || "https://reviranexgen.com/assets/stamp.png",
+          storeKeeperSignUrl: input.storeKeeperSignUrl || "",
+          qcEnggSignUrl: input.qcEnggSignUrl || "",
+          storeInchargeSignUrl: input.storeInchargeSignUrl || "",
+          plantHeadSignUrl: input.plantHeadSignUrl || "",
           primaryColor: input.primaryColor || "#da2032",
           secondaryColor: input.secondaryColor || "#2f3591",
           entityName: input.entityName || "Revira NexGen Structure Pvt. Ltd.",
           cin: input.cin || "U16222DL2025PTC459465",
+          companyGstin: input.companyGstin || "07AAPCR3026H1ZA",
           website: input.website || "www.reviranexgen.com",
           email: input.email || "info@reviranexgen.com",
           headOfficeAddress: input.headOfficeAddress || "28, E2 Block, Shivram Park Nangloi Delhi - 110041",
@@ -590,6 +682,384 @@ export async function registerRoutes(
     const deleted = await storage.deleteInvoiceItem(Number(req.params.id));
     if (!deleted) {
       return res.status(404).json({ message: "Invoice item not found" });
+    }
+    res.status(204).send();
+  });
+
+  // Gate Pass routes
+  app.get(api.gatePasses.list.path.replace("/revira",""), async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const gatePassesList = await storage.getGatePasses();
+    res.json(gatePassesList);
+  });
+
+  app.get(api.gatePasses.get.path.replace("/revira",""), async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const gatePass = await storage.getGatePass(Number(req.params.id));
+    if (!gatePass) {
+      return res.status(404).json({ message: "Gate pass not found" });
+    }
+    res.json(gatePass);
+  });
+
+  app.get(api.gatePasses.getByProject.path.replace("/revira",""), async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const gatePass = await storage.getGatePassByProjectId(Number(req.params.projectId));
+    if (!gatePass) {
+      return res.status(404).json({ message: "Gate pass not found" });
+    }
+    res.json(gatePass);
+  });
+
+  app.post(api.gatePasses.create.path.replace("/revira",""), async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const input = api.gatePasses.create.input.parse(req.body);
+      const gatePass = await storage.createGatePass(input);
+      res.status(201).json(gatePass);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+        });
+      }
+      throw err;
+    }
+  });
+
+  app.put(api.gatePasses.update.path.replace("/revira",""), async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const input = api.gatePasses.update.input.parse(req.body);
+      const gatePass = await storage.updateGatePass(Number(req.params.id), input);
+      if (!gatePass) {
+        return res.status(404).json({ message: "Gate pass not found" });
+      }
+      res.json(gatePass);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+        });
+      }
+      throw err;
+    }
+  });
+
+  app.delete(api.gatePasses.delete.path.replace("/revira",""), async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    await storage.deleteGatePassItemsByGatePassId(Number(req.params.id));
+    const deleted = await storage.deleteGatePass(Number(req.params.id));
+    if (!deleted) {
+      return res.status(404).json({ message: "Gate pass not found" });
+    }
+    res.status(204).send();
+  });
+
+  // Duplicate gate pass
+  app.post("/api/gate-passes/:id/duplicate", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const originalGatePass = await storage.getGatePass(Number(req.params.id));
+      if (!originalGatePass) {
+        return res.status(404).json({ message: "Gate pass not found" });
+      }
+
+      const allVersions = await storage.getGatePassVersions(originalGatePass.projectId);
+      const nextVersion = allVersions.length + 1;
+      const nextRevision = `R-${String(nextVersion).padStart(3, '0')}`;
+
+      const newGatePass = await storage.createGatePass({
+        projectId: originalGatePass.projectId,
+        gatePassNumber: originalGatePass.gatePassNumber,
+        revision: nextRevision,
+        version: nextVersion,
+        parentGatePassId: originalGatePass.id,
+        organisationName: originalGatePass.organisationName,
+        registeredAddress: originalGatePass.registeredAddress,
+        consigneeAddress: originalGatePass.consigneeAddress,
+        clientGstin: originalGatePass.clientGstin,
+        workOrderNo: originalGatePass.workOrderNo,
+        dispatchDetails: originalGatePass.dispatchDetails,
+        cgstRate: originalGatePass.cgstRate,
+        sgstRate: originalGatePass.sgstRate,
+        igstRate: originalGatePass.igstRate,
+        appliedTaxType: originalGatePass.appliedTaxType,
+        totalAmount: originalGatePass.totalAmount,
+        totalTax: originalGatePass.totalTax,
+        grandTotal: originalGatePass.grandTotal,
+        contentSections: originalGatePass.contentSections,
+      });
+
+      const originalItems = await storage.getGatePassItems(originalGatePass.id);
+      for (const item of originalItems) {
+        await storage.createGatePassItem({
+          gatePassId: newGatePass.id,
+          serialNo: item.serialNo,
+          description: item.description,
+          hsnCode: item.hsnCode,
+          quantity: item.quantity,
+          unit: item.unit,
+          ratePerUnit: item.ratePerUnit,
+          percentage: item.percentage,
+          amount: item.amount,
+          remarks: item.remarks,
+        });
+      }
+
+      res.status(201).json(newGatePass);
+    } catch (err) {
+      console.error("Duplicate gate pass error:", err);
+      res.status(500).json({ message: "Failed to duplicate gate pass" });
+    }
+  });
+
+  // Get gate pass versions
+  app.get("/api/projects/:projectId/gate-pass-versions", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const versions = await storage.getGatePassVersions(Number(req.params.projectId));
+    res.json(versions);
+  });
+
+  // Gate Pass Items routes
+  app.get(api.gatePassItems.list.path.replace("/revira",""), async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const items = await storage.getGatePassItems(Number(req.params.gatePassId));
+    res.json(items);
+  });
+
+  app.post(api.gatePassItems.create.path.replace("/revira",""), async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const input = api.gatePassItems.create.input.parse(req.body);
+      const item = await storage.createGatePassItem({
+        ...input,
+        gatePassId: Number(req.params.gatePassId),
+      });
+      res.status(201).json(item);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+        });
+      }
+      throw err;
+    }
+  });
+
+  app.put(api.gatePassItems.update.path.replace("/revira",""), async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const input = api.gatePassItems.update.input.parse(req.body);
+      const item = await storage.updateGatePassItem(Number(req.params.id), input);
+      if (!item) {
+        return res.status(404).json({ message: "Gate pass item not found" });
+      }
+      res.json(item);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+        });
+      }
+      throw err;
+    }
+  });
+
+  app.delete(api.gatePassItems.delete.path.replace("/revira",""), async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const deleted = await storage.deleteGatePassItem(Number(req.params.id));
+    if (!deleted) {
+      return res.status(404).json({ message: "Gate pass item not found" });
+    }
+    res.status(204).send();
+  });
+
+  // Delivery Challan routes
+  app.get(api.deliveryChallans.list.path.replace("/revira",""), async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const deliveryChallansList = await storage.getDeliveryChallans();
+    res.json(deliveryChallansList);
+  });
+
+  app.get(api.deliveryChallans.get.path.replace("/revira",""), async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const deliveryChallan = await storage.getDeliveryChallan(Number(req.params.id));
+    if (!deliveryChallan) {
+      return res.status(404).json({ message: "Delivery challan not found" });
+    }
+    res.json(deliveryChallan);
+  });
+
+  app.get(api.deliveryChallans.getByProject.path.replace("/revira",""), async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const deliveryChallan = await storage.getDeliveryChallanByProjectId(Number(req.params.projectId));
+    if (!deliveryChallan) {
+      return res.status(404).json({ message: "Delivery challan not found" });
+    }
+    res.json(deliveryChallan);
+  });
+
+  app.post(api.deliveryChallans.create.path.replace("/revira",""), async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const input = api.deliveryChallans.create.input.parse(req.body);
+      const deliveryChallan = await storage.createDeliveryChallan(input);
+      res.status(201).json(deliveryChallan);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+        });
+      }
+      throw err;
+    }
+  });
+
+  app.put(api.deliveryChallans.update.path.replace("/revira",""), async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const input = api.deliveryChallans.update.input.parse(req.body);
+      const deliveryChallan = await storage.updateDeliveryChallan(Number(req.params.id), input);
+      if (!deliveryChallan) {
+        return res.status(404).json({ message: "Delivery challan not found" });
+      }
+      res.json(deliveryChallan);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+        });
+      }
+      throw err;
+    }
+  });
+
+  app.delete(api.deliveryChallans.delete.path.replace("/revira",""), async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    await storage.deleteDeliveryChallanItemsByDeliveryChallanId(Number(req.params.id));
+    const deleted = await storage.deleteDeliveryChallan(Number(req.params.id));
+    if (!deleted) {
+      return res.status(404).json({ message: "Delivery challan not found" });
+    }
+    res.status(204).send();
+  });
+
+  // Duplicate delivery challan
+  app.post("/api/delivery-challans/:id/duplicate", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const originalDeliveryChallan = await storage.getDeliveryChallan(Number(req.params.id));
+      if (!originalDeliveryChallan) {
+        return res.status(404).json({ message: "Delivery challan not found" });
+      }
+
+      const allVersions = await storage.getDeliveryChallanVersions(originalDeliveryChallan.projectId);
+      const nextVersion = allVersions.length + 1;
+      const nextRevision = `R-${String(nextVersion).padStart(3, '0')}`;
+
+      const newDeliveryChallan = await storage.createDeliveryChallan({
+        projectId: originalDeliveryChallan.projectId,
+        deliveryChallanNumber: originalDeliveryChallan.deliveryChallanNumber,
+        revision: nextRevision,
+        version: nextVersion,
+        parentDeliveryChallanId: originalDeliveryChallan.id,
+        organisationName: originalDeliveryChallan.organisationName,
+        registeredAddress: originalDeliveryChallan.registeredAddress,
+        consigneeAddress: originalDeliveryChallan.consigneeAddress,
+        clientGstin: originalDeliveryChallan.clientGstin,
+        workOrderNo: originalDeliveryChallan.workOrderNo,
+        dispatchDetails: originalDeliveryChallan.dispatchDetails,
+        cgstRate: originalDeliveryChallan.cgstRate,
+        sgstRate: originalDeliveryChallan.sgstRate,
+        igstRate: originalDeliveryChallan.igstRate,
+        appliedTaxType: originalDeliveryChallan.appliedTaxType,
+        totalAmount: originalDeliveryChallan.totalAmount,
+        totalTax: originalDeliveryChallan.totalTax,
+        grandTotal: originalDeliveryChallan.grandTotal,
+        contentSections: originalDeliveryChallan.contentSections,
+      });
+
+      const originalItems = await storage.getDeliveryChallanItems(originalDeliveryChallan.id);
+      for (const item of originalItems) {
+        await storage.createDeliveryChallanItem({
+          deliveryChallanId: newDeliveryChallan.id,
+          serialNo: item.serialNo,
+          description: item.description,
+          hsnCode: item.hsnCode,
+          quantity: item.quantity,
+          unit: item.unit,
+          ratePerUnit: item.ratePerUnit,
+          percentage: item.percentage,
+          amount: item.amount,
+          remarks: item.remarks,
+        });
+      }
+
+      res.status(201).json(newDeliveryChallan);
+    } catch (err) {
+      console.error("Duplicate delivery challan error:", err);
+      res.status(500).json({ message: "Failed to duplicate delivery challan" });
+    }
+  });
+
+  // Get delivery challan versions
+  app.get("/api/projects/:projectId/delivery-challan-versions", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const versions = await storage.getDeliveryChallanVersions(Number(req.params.projectId));
+    res.json(versions);
+  });
+
+  // Delivery Challan Items routes
+  app.get(api.deliveryChallanItems.list.path.replace("/revira",""), async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const items = await storage.getDeliveryChallanItems(Number(req.params.deliveryChallanId));
+    res.json(items);
+  });
+
+  app.post(api.deliveryChallanItems.create.path.replace("/revira",""), async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const input = api.deliveryChallanItems.create.input.parse(req.body);
+      const item = await storage.createDeliveryChallanItem({
+        ...input,
+        deliveryChallanId: Number(req.params.deliveryChallanId),
+      });
+      res.status(201).json(item);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+        });
+      }
+      throw err;
+    }
+  });
+
+  app.put(api.deliveryChallanItems.update.path.replace("/revira",""), async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const input = api.deliveryChallanItems.update.input.parse(req.body);
+      const item = await storage.updateDeliveryChallanItem(Number(req.params.id), input);
+      if (!item) {
+        return res.status(404).json({ message: "Delivery challan item not found" });
+      }
+      res.json(item);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+        });
+      }
+      throw err;
+    }
+  });
+
+  app.delete(api.deliveryChallanItems.delete.path.replace("/revira",""), async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const deleted = await storage.deleteDeliveryChallanItem(Number(req.params.id));
+    if (!deleted) {
+      return res.status(404).json({ message: "Delivery challan item not found" });
     }
     res.status(204).send();
   });

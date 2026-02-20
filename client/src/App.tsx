@@ -14,6 +14,9 @@ import ProjectsPage from "@/pages/projects";
 import UsersPage from "@/pages/users";
 import QuotationPage from "@/pages/quotation";
 import InvoicePage from "@/pages/invoice";
+import GatePassPage from "@/pages/gate-pass";
+import DeliveryChallanPage from "@/pages/delivery-challan";
+import LedgerPage from "@/pages/ledger";
 import BrandingPage from "@/pages/branding";
 import SettingsPage from "@/pages/settings";
 import NotFound from "@/pages/not-found";
@@ -76,6 +79,27 @@ function Router() {
       </Route>
       <Route path="/revira/projects/:id/invoice">
         <ProtectedRoute component={InvoicePage} />
+      </Route>
+
+      {/* Gate Pass Routes */}
+      <Route path="/revira/projects/:id/gate-pass/:gatePassId">
+        <ProtectedRoute component={GatePassPage} />
+      </Route>
+      <Route path="/revira/projects/:id/gate-pass">
+        <ProtectedRoute component={GatePassPage} />
+      </Route>
+
+      {/* Delivery Challan Routes */}
+      <Route path="/revira/projects/:id/delivery-challan/:deliveryChallanId">
+        <ProtectedRoute component={DeliveryChallanPage} />
+      </Route>
+      <Route path="/revira/projects/:id/delivery-challan">
+        <ProtectedRoute component={DeliveryChallanPage} />
+      </Route>
+
+      {/* Ledger Route */}
+      <Route path="/revira/projects/:id/ledger">
+        <ProtectedRoute component={LedgerPage} />
       </Route>
 
       {/* Branding Route */}
